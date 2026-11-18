@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,8 +34,23 @@ jobs:
             0x8000 $B/partitions.bin \
             0xe000 $PKG/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 $B/firmware.bin
+          cp $B/firmware.bin controle-htv-launcher.bin
 
       - uses: actions/upload-artifact@v4
         with:
           name: controle-htv-cardputer
-          path: controle-htv-cardputer.bin
+          path: |
+            controle-htv-cardputer.bin
+            controle-htv-launcher.bin
+
+      - name: Publicar na Release "ultima-versao"
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete ultima-versao -y --cleanup-tag || true
+          gh release create ultima-versao \
+            controle-htv-launcher.bin controle-htv-cardputer.bin \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "Controle HTV - ultima versao" \
+            --notes "controle-htv-launcher.bin: para instalar pelo cartao SD com o Launcher. controle-htv-cardputer.bin: binario completo para gravar via USB no endereco 0x0."

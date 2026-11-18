@@ -50,15 +50,28 @@ Não existe código publicado da HTV 8, então os códigos IR podem não funcion
 
 ## Como gravar
 
-### Opção A: arquivo pronto
-1. Na aba **Actions** do GitHub, abra a última execução que deu certo e baixe o artefato `controle-htv-cardputer`.
-2. Grave o `controle-htv-cardputer.bin` no endereço **0x0**. Dá pra fazer pelo navegador em <https://espressif.github.io/esptool-js/> (Chrome ou Edge, com o Cardputer no USB), ou com:
-   ```bash
-   esptool.py --chip esp32s3 write_flash 0x0 controle-htv-cardputer.bin
-   ```
-   Se o Cardputer não for detectado, segure o botão **G0** enquanto conecta o cabo USB.
+Os arquivos ficam na Release **ultima-versao**:
+<https://github.com/jonatassantosribeiro1914-commits/cardputer/releases/tag/ultima-versao>
 
-### Opção B: compilar no PC
+| Arquivo | Para quê |
+|---|---|
+| `controle-htv-launcher.bin` | Instalar pelo **cartão SD** com o Launcher |
+| `controle-htv-cardputer.bin` | Gravar pelo **USB** no endereço 0x0 |
+
+### Pelo cartão SD (Launcher)
+1. Copie `controle-htv-launcher.bin` para o cartão SD do Cardputer.
+2. No Cardputer, abra o **Launcher** → **SD** → escolha o arquivo → **Install**.
+
+Se o seu Cardputer ainda não tem o Launcher, grave ele uma vez pelo navegador em <https://bmorcelli.github.io/Launcher/> (Chrome ou Edge, Cardputer no USB).
+
+### Pelo USB
+Grave `controle-htv-cardputer.bin` no endereço **0x0** pelo navegador em <https://espressif.github.io/esptool-js/>, ou com:
+```bash
+esptool.py --chip esp32s3 write_flash 0x0 controle-htv-cardputer.bin
+```
+Se o Cardputer não for detectado, segure o botão **G0** enquanto conecta o cabo USB.
+
+### Compilar no PC
 Instale o [PlatformIO](https://platformio.org/) e rode:
 ```bash
 pio run -t upload
