@@ -1,0 +1,38 @@
+name: Build firmware
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar PlatformIO
+        run: pip install platformio
+
+      - name: Compilar
+        run: pio run
+
+      - name: Gerar binario unico (gravar em 0x0)
+        run: |
+          B=.pio/build/cardputer
+          PKG=~/.platformio/packages
+          python $PKG/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin \
+            -o controle-htv-cardputer.bin \
+            0x0 $B/bootloader.bin \
+            0x8000 $B/partitions.bin \
+            0xe000 $PKG/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+            0x10000 $B/firmware.bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: controle-htv-cardputer
+          path: controle-htv-cardputer.bin
