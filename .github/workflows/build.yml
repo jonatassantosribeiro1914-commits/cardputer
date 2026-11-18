@@ -29,19 +29,19 @@ jobs:
           B=.pio/build/cardputer
           PKG=~/.platformio/packages
           python $PKG/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin \
-            -o controle-htv-cardputer.bin \
+            -o controle-philips-cardputer.bin \
             0x0 $B/bootloader.bin \
             0x8000 $B/partitions.bin \
             0xe000 $PKG/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
             0x10000 $B/firmware.bin
-          cp $B/firmware.bin controle-htv-launcher.bin
+          cp $B/firmware.bin controle-philips-launcher.bin
 
       - uses: actions/upload-artifact@v4
         with:
-          name: controle-htv-cardputer
+          name: controle-philips-cardputer
           path: |
-            controle-htv-cardputer.bin
-            controle-htv-launcher.bin
+            controle-philips-cardputer.bin
+            controle-philips-launcher.bin
 
       - name: Publicar na Release "ultima-versao"
         if: github.event_name != 'pull_request'
@@ -50,7 +50,7 @@ jobs:
         run: |
           gh release delete ultima-versao -y --cleanup-tag || true
           gh release create ultima-versao \
-            controle-htv-launcher.bin controle-htv-cardputer.bin \
+            controle-philips-launcher.bin controle-philips-cardputer.bin \
             --target "$GITHUB_SHA" --prerelease \
-            --title "Controle HTV - ultima versao" \
-            --notes "controle-htv-launcher.bin: para instalar pelo cartao SD com o Launcher. controle-htv-cardputer.bin: binario completo para gravar via USB no endereco 0x0."
+            --title "Controle Philips Ambilight - ultima versao" \
+            --notes "controle-philips-launcher.bin: para instalar pelo cartao SD com o Launcher. controle-philips-cardputer.bin: binario completo para gravar via USB no endereco 0x0."
