@@ -4,11 +4,14 @@
 // - Testar Ligar: dispara codigos de "Ligar" de varias TV boxes para descobrir o certo
 // - Explorar: varre enderecos/comandos NEC e grava o que funcionar em cada tecla
 
+// BleKeyboard.h precisa vir antes de M5Cardputer.h: o M5Cardputer define
+// macros (KEY_BACKSPACE, KEY_TAB...) com os mesmos nomes das constantes BLE.
+#include <BleKeyboard.h>
+static const uint8_t BLE_BACKSPACE = 0xB2;  // valor do BleKeyboard
 #include <M5Cardputer.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
 #include <Preferences.h>
-#include <BleKeyboard.h>
 #include "codes.h"
 
 static const uint8_t IR_PIN = 44;
@@ -245,7 +248,7 @@ void btText(char c) {
     return;
   }
   if (c == '\n') ble.write(KEY_RETURN);
-  else if (c == '\b') ble.write(KEY_BACKSPACE);
+  else if (c == '\b') ble.write(BLE_BACKSPACE);
   else ble.write((uint8_t)c);
 }
 
