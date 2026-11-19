@@ -9,33 +9,47 @@ Firmware para o **M5Stack Cardputer** e o **Cardputer ADV (S3A)** que transforma
 | **Controle IR** | LED infravermelho do Cardputer, protocolo **RC6** da Philips | Sim |
 | **Controle Bluetooth** | O Cardputer vira teclado Bluetooth do Google TV, e também serve para digitar em buscas | Não |
 
-## Teclas do Controle IR
+## Atalhos principais
+
+| Tecla | Atalho |
+|---|---|
+| `T` | **TV aberta** (antena) |
+| `I` | **HDMI** |
+| `H` | **Home** |
+
+Não existe código infravermelho direto para "TV aberta" ou "HDMI" nessas Philips: a tecla TV (`9F`) leva para a proteção de tela. Por isso o `T` e o `I` são **sequências**: o Cardputer abre o menu **Fontes** e navega sozinho até o item certo. Por padrão:
+- `T`: Fontes → sobe até o 1º item → OK
+- `I`: Fontes → sobe até o 1º item → desce 1 (HDMI 1) → OK
+
+Se não cair no lugar certo na sua TV, ajuste em **Menu → 3 Configurar atalhos T e I**:
+- Escolha o atalho e teste as opções prontas com `Enter`. Quando uma funcionar, aperte `S` para salvar.
+- Ou escolha **Gravar minha sequência** e faça o caminho com as teclas normais: `E` abre Fontes, depois as setas e `Enter`. Cada tecla já vai para a TV e o tempo entre elas é gravado. Aperte `Tab` para salvar.
+
+Qualquer tecla interrompe um atalho no meio.
+
+## Outras teclas do Controle IR
 
 | Tecla | Botão | Tecla | Botão |
 |---|---|---|---|
-| `P` | Ligar / desligar | `A` | **Ambilight** |
-| `;` `.` `,` `/` | Cima, baixo, esquerda, direita | `Enter` | OK |
-| `Del` | Voltar | `H` | Home |
+| `P` | Ligar / desligar | `A` | Ambilight |
+| `;` `.` `,` `/` | Setas | `Enter` | OK |
+| `Del` | Voltar | `E` | Fontes (menu) |
 | `M` | Menu (configurações) | `O` | Opções |
 | `=` / `-` | Volume + / − | `X` | Mudo |
 | `]` / `[` | Canal + / − | `0`–`9` | Números |
-| `Espaço` | Play / Pause (alterna) | `S` | Stop |
-| `R` / `F` | Voltar (<<) / Avançar (>>) | `I` | Fontes (HDMI etc.) |
-| `G` | Guia de TV | `T` | TV |
-| `N` | Netflix | `Y` | YouTube |
-| `V` | Prime Video | `` ` `` | Volta ao menu |
-
-As setas, o volume, os canais e o `<<`/`>>` repetem enquanto a tecla está segurada. Com `Fn`, as setas do teclado também funcionam.
+| `Espaço` | Play / Pause | `S` | Stop |
+| `R` / `F` | << / >> | `G` | Guia de TV |
+| `Y` | YouTube | `` ` `` | Volta ao menu |
 
 ## Menu
 
-1. **Controle IR**: aponte o Cardputer para a frente da TV, a 1–2 m.
-2. **Controle Bluetooth**: na TV, abra *Configurações → Controles e acessórios → Parear controle ou acessório* e escolha **Cardputer TV**. A tecla `Tab` liga o modo de digitar texto. Ligar, Ambilight e os botões de apps funcionam só no IR.
-3. **Explorar códigos**: testa outros comandos RC6 e grava o que funcionar numa tecla.
-   - `Tab` troca entre comando e endereço. `,` e `/` mudam o valor de 1 em 1, `;` e `.` de 16 em 16.
-   - `Enter` envia e `A` testa os comandos sozinho, um a cada 1,5 s.
-   - `B` e depois uma tecla grava o comando nela. Por exemplo, `B` e depois `Y` troca o que o `Y` faz.
-4. **Restaurar teclas**: volta tudo para os códigos originais da Philips.
+1. **Controle IR**: aponte o Cardputer para a TV, a 1–2 m.
+2. **Controle Bluetooth**: na TV, abra *Configurações → Controles e acessórios → Parear controle ou acessório* e escolha **Cardputer TV**. A tecla `Tab` liga o modo de digitar. `T`, `I`, Ligar e Ambilight funcionam só no IR.
+3. **Configurar atalhos T e I**: veja acima.
+4. **Explorar códigos**: testa outros comandos RC6 e grava numa tecla, inclusive no `T` e no `I`.
+   - `Tab` troca o campo, `,` e `/` mudam de 1 em 1, `;` e `.` de 16 em 16.
+   - `Enter` envia, `A` testa sozinho, `B` e depois uma tecla grava.
+5. **Restaurar padrão**: volta as teclas e os atalhos para o padrão.
 
 ## Códigos
 

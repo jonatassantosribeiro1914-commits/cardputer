@@ -1,5 +1,6 @@
 // Controle Philips Ambilight para M5Stack Cardputer / Cardputer ADV (S3A)
 // - Controle IR: LED infravermelho interno (GPIO 44), protocolo RC6 da Philips
+// - Atalhos T (TV aberta) e I (HDMI): sequencias de teclas configuraveis
 // - Controle Bluetooth: o Cardputer vira teclado BLE para o Google TV
 // - Explorar: testa comandos RC6 e grava o que funcionar em qualquer tecla
 
@@ -23,19 +24,22 @@ Preferences prefs;
 M5Canvas canvas(&M5Cardputer.Display);
 int W = 240, H = 135;
 
-// ---------- Configuracao salva (teclas regravadas pelo Explorar) ----------
+// ---------- Configuracao salva ----------
 struct BtnCode {
   uint8_t addr, cmd, valid;
 };
 struct Config {
   uint32_t magic;
   BtnCode b[B_COUNT];
+  Macro m[MC_COUNT];
 };
-static const uint32_t CFG_MAGIC = 0x50484C32;  // "PHL2"
+static const uint32_t CFG_MAGIC = 0x50484C33;  // "PHL3"
 Config cfg;
 
 void loadDefaults() {
   for (int i = 0; i < B_COUNT; i++) cfg.b[i] = {PHILIPS_ADDR, BTN[i].cmd, 1};
+  buildPreset(MC_TV, 0, cfg.m[MC_TV]);
+  buildPreset(MC_HDMI, 0, cfg.m[MC_HDMI]);
 }
 
 void saveConfig() {
@@ -55,32 +59,83 @@ void loadConfig() {
 // O bit "toggle" muda a cada nova tecla apertada; enquanto a tecla fica
 // segurada ele se mantem, e a TV entende como repeticao.
 bool rc6Toggle = false;
+uint32_t lastSendAt = 0;
 
 void sendRC6(uint8_t addr, uint8_t cmd, bool newPress) {
   if (newPress) rc6Toggle = !rc6Toggle;
   uint64_t data = irsend.encodeRC6(addr, cmd, kRC6Mode0Bits);
   if (rc6Toggle) data = irsend.toggleRC6(data, kRC6Mode0Bits);
   irsend.sendRC6(data, kRC6Mode0Bits);
+  lastSendAt = millis();
+}
+
+// ---------- Nomes ----------
+String hex2(uint8_t v) {
+  char b[3];
+  snprintf(b, sizeof(b), "%02X", v);
+  return String(b);
+}
+
+String cmdName(uint8_t cmd) {
+  if (cmd <= 9) return String("Num ") + cmd;
+  if (cmd == CMD_PAUSE) return "Pause";
+  for (int i = 0; i < B_COUNT; i++)
+    if (BTN[i].cmd == cmd) return BTN[i].name;
+  return "cmd " + hex2(cmd);
+}
+
+// Resumo de uma sequencia, ex.: "Fontes > Cima x8 > OK"
+String macroSummary(const Macro& m, size_t maxLen = 38) {
+  if (m.n == 0) return "(vazio)";
+  String s;
+  for (int i = 0; i < m.n;) {
+    int j = i;
+    while (j < m.n && m.cmd[j] == m.cmd[i]) j++;
+    if (s.length()) s += " > ";
+    s += cmdName(m.cmd[i]);
+    if (j - i > 1) s += " x" + String(j - i);
+    i = j;
+  }
+  if (s.length() > maxLen) s = s.substring(0, maxLen - 2) + "..";
+  return s;
+}
+
+// ---------- Execucao dos atalhos ----------
+Macro runM;
+bool runActive = false;
+int runIdx = 0;
+uint32_t runNextAt = 0;
+String runName;
+
+void startMacro(const Macro& m, const String& name) {
+  if (m.n == 0) return;
+  runM = m;
+  runIdx = 0;
+  runNextAt = millis();
+  runName = name;
+  runActive = true;
+}
+
+void macroTick() {
+  if (!runActive || (int32_t)(millis() - runNextAt) < 0) return;
+  sendRC6(runM.addr, runM.cmd[runIdx], true);
+  runNextAt = millis() + runM.wait[runIdx];
+  if (++runIdx >= runM.n) runActive = false;
 }
 
 // ---------- Interface ----------
-enum Mode { M_MENU, M_IR, M_BT, M_EXPLORE, M_RESET };
+enum Mode { M_MENU, M_IR, M_BT, M_SHORTCUTS, M_SC_EDIT, M_RECORD, M_EXPLORE, M_RESET };
 Mode mode = M_MENU;
 
 String statusMsg;
 uint32_t statusAt = 0;
-uint32_t lastSendAt = 0;
 
 void setStatus(const String& s) {
   statusMsg = s;
   statusAt = millis();
 }
 
-String hex2(uint8_t v) {
-  char b[3];
-  snprintf(b, sizeof(b), "%02X", v);
-  return String(b);
-}
+bool statusFresh() { return statusMsg.length() && millis() - statusAt < 4000; }
 
 void header(const char* title, uint16_t color) {
   canvas.fillRect(0, 0, W, 18, color);
@@ -89,6 +144,7 @@ void header(const char* title, uint16_t color) {
   canvas.setCursor(4, 2);
   canvas.print(title);
   canvas.setFont(&fonts::Font0);
+  if (millis() - lastSendAt < 200) canvas.fillCircle(W - 12, 9, 5, TFT_RED);
 }
 
 void line(int y, const String& s, uint16_t color = TFT_WHITE) {
@@ -98,41 +154,52 @@ void line(int y, const String& s, uint16_t color = TFT_WHITE) {
   canvas.print(s);
 }
 
-void footer(const char* text) { line(H - 9, text, TFT_DARKGREY); }
-
-void statusLine(int y) {
-  if (statusMsg.length() && millis() - statusAt < 4000) line(y, statusMsg, TFT_YELLOW);
+void footer(const char* text) {
+  if (statusFresh()) line(H - 9, statusMsg, TFT_YELLOW);
+  else line(H - 9, text, TFT_DARKGREY);
 }
 
-void sendDot() {
-  if (millis() - lastSendAt < 200) canvas.fillCircle(W - 12, 9, 5, TFT_RED);
+// Lista com selecao e rolagem
+void drawList(int y0, int rows, const char* const* items, int count, int sel, uint16_t selColor) {
+  int first = sel - rows + 1;
+  if (first < 0) first = 0;
+  for (int r = 0; r < rows && first + r < count; r++) {
+    int i = first + r, y = y0 + r * 12;
+    bool on = i == sel;
+    if (on) canvas.fillRect(0, y - 2, W, 12, selColor);
+    canvas.setFont(&fonts::Font0);
+    canvas.setTextColor(on ? TFT_WHITE : TFT_LIGHTGREY, on ? selColor : TFT_BLACK);
+    canvas.setCursor(4, y);
+    canvas.print(items[i]);
+  }
 }
 
 // ---------- Menu ----------
 const char* MENU_ITEMS[] = {
   "1  Controle IR",
   "2  Controle Bluetooth",
-  "3  Explorar codigos",
-  "4  Restaurar teclas",
+  "3  Configurar atalhos T e I",
+  "4  Explorar codigos",
+  "5  Restaurar padrao",
 };
-const int MENU_COUNT = 4;
+const int MENU_COUNT = 5;
 int menuSel = 0;
 
 void drawMenu() {
   header("Controle Philips", TFT_CYAN);
   canvas.setFont(&fonts::FreeSans9pt7b);
   for (int i = 0; i < MENU_COUNT; i++) {
-    int y = 23 + i * 22;
+    int y = 21 + i * 20;
     if (i == menuSel) {
-      canvas.fillRoundRect(2, y, W - 4, 20, 4, TFT_DARKCYAN);
+      canvas.fillRoundRect(2, y, W - 4, 19, 4, TFT_DARKCYAN);
       canvas.setTextColor(TFT_WHITE, TFT_DARKCYAN);
     } else {
       canvas.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     }
-    canvas.setCursor(8, y + 3);
+    canvas.setCursor(8, y + 2);
     canvas.print(MENU_ITEMS[i]);
   }
-  footer("; . mover   Enter abrir   1-4 atalho");
+  footer("; . mover   Enter abrir   1-5 atalho");
 }
 
 // ---------- Controle IR ----------
@@ -146,17 +213,23 @@ int btnForKey(char c) {
   return -1;
 }
 
+int macroForKey(char c) {
+  if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';
+  for (int i = 0; i < MC_COUNT; i++)
+    if (MACRO_KEY[i] == c) return i;
+  return -1;
+}
+
 void irButton(int b, bool newPress) {
   const BtnCode& bc = cfg.b[b];
   uint8_t cmd = bc.cmd;
   String name = BTN[b].name;
-  if (b == B_PLAY && cfg.b[b].cmd == BTN[B_PLAY].cmd) {
+  if (b == B_PLAY && bc.cmd == BTN[B_PLAY].cmd) {
     if (!playNext) cmd = CMD_PAUSE;
     name = playNext ? "Play" : "Pause";
     if (newPress) playNext = !playNext;
   }
   sendRC6(bc.addr, cmd, newPress);
-  lastSendAt = millis();
   lastName = name;
   setStatus("RC6 end " + hex2(bc.addr) + " cmd " + hex2(cmd));
 }
@@ -164,29 +237,35 @@ void irButton(int b, bool newPress) {
 void irDigit(char c) {
   uint8_t cmd = c - '0';  // 0..9 = comandos 0x00..0x09
   sendRC6(PHILIPS_ADDR, cmd, true);
-  lastSendAt = millis();
   lastName = String("Numero ") + c;
   setStatus("RC6 end 00 cmd " + hex2(cmd));
 }
 
-void drawHints() {
-  line(60, "P Ligar  A Ambilight  H Home  M Menu");
-  line(70, "; . , / setas  Enter OK  Del Voltar");
-  line(80, "= - Volume  X Mudo  [ ] Canal  0-9");
-  line(90, "Espaco Play/Pause  S Stop  R F << >>");
-  line(100, "I Fontes  G Guia  O Opcoes  T TV");
-  line(110, "N Netflix  Y YouTube  V Prime Video");
+void chip(int x, int w, const char* key, const char* label, uint16_t color) {
+  canvas.fillRoundRect(x, 44, w, 15, 4, color);
+  canvas.setFont(&fonts::Font0);
+  canvas.setTextColor(TFT_BLACK, color);
+  canvas.setCursor(x + 5, 48);
+  canvas.print(key);
+  canvas.print(" ");
+  canvas.print(label);
 }
 
 void drawIR() {
   header("Philips Ambilight - IR", TFT_ORANGE);
-  sendDot();
   canvas.setFont(&fonts::FreeSansBold12pt7b);
   canvas.setTextColor(TFT_WHITE, TFT_BLACK);
-  canvas.setCursor(6, 22);
-  canvas.print(lastName);
-  statusLine(47);
-  drawHints();
+  canvas.setCursor(6, 21);
+  if (runActive) canvas.printf("%s %d/%d", runName.c_str(), runIdx, runM.n);
+  else canvas.print(lastName);
+  chip(2, 82, "T", "TV aberta", TFT_GREENYELLOW);
+  chip(88, 66, "I", "HDMI", TFT_SKYBLUE);
+  chip(158, 80, "H", "Home", TFT_GOLD);
+  line(64, "P Ligar  A Ambilight  E Fontes  M Menu");
+  line(74, "; . , / setas  Enter OK  Del Voltar");
+  line(84, "= - Volume  X Mudo  [ ] Canal  0-9");
+  line(94, "Espaco Play/Pause  S Stop  R F << >>");
+  line(104, "G Guia  O Opcoes  Y YouTube");
   footer("Aponte para a TV            ` menu");
 }
 
@@ -246,7 +325,6 @@ void drawBT() {
   canvas.setTextColor(con ? TFT_GREEN : TFT_YELLOW, TFT_BLACK);
   canvas.setCursor(6, 22);
   canvas.print(con ? "Conectado" : "Aguardando pareamento");
-  canvas.setFont(&fonts::Font0);
   if (!con) {
     line(44, "Na TV: Configuracoes > Controles e");
     line(54, "acessorios > Parear controle ou");
@@ -257,17 +335,105 @@ void drawBT() {
   }
   if (textMode) {
     line(44, "Digite: as letras vao para a TV");
-    line(54, "(busca do YouTube, Netflix etc).");
+    line(54, "(busca do YouTube etc).");
     line(64, "Enter confirma, Del apaga.");
     footer("Tab volta ao controle");
     return;
   }
-  statusLine(44);
-  line(60, "; . , / setas  Enter OK  Del Voltar");
-  line(70, "H Home  M Menu  = - Volume  X Mudo");
-  line(80, "Espaco Play/Pause  S Stop  R F << >>");
-  line(90, "Ligar, Ambilight e apps: so no IR");
+  line(50, "; . , / setas  Enter OK  Del Voltar");
+  line(60, "H Home  M Menu  = - Volume  X Mudo");
+  line(70, "Espaco Play/Pause  S Stop  R F << >>");
+  line(86, "T, I, Ligar e Ambilight: so no IR", TFT_DARKGREY);
   footer("Tab digitar texto           ` menu");
+}
+
+// ---------- Configurar atalhos ----------
+int scSel = 0;    // qual atalho (MC_TV / MC_HDMI)
+int scItem = 0;   // item selecionado na lista de opcoes
+const char* scItems[8];
+int scCount = 0;
+
+void buildScItems() {
+  const char* const* p = scSel == MC_TV ? TV_PRESETS : HDMI_PRESETS;
+  int n = scSel == MC_TV ? NUM_TV_PRESETS : NUM_HDMI_PRESETS;
+  for (int i = 0; i < n; i++) scItems[i] = p[i];
+  scItems[n] = "* Gravar minha sequencia";
+  scCount = n + 1;
+}
+
+void drawShortcuts() {
+  header("Configurar atalhos", TFT_GREENYELLOW);
+  for (int i = 0; i < MC_COUNT; i++) {
+    int y = 24 + i * 34;
+    bool on = i == scSel;
+    if (on) canvas.fillRoundRect(2, y - 3, W - 4, 32, 4, TFT_DARKGREEN);
+    uint16_t bg = on ? TFT_DARKGREEN : TFT_BLACK;
+    canvas.setFont(&fonts::FreeSansBold9pt7b);
+    canvas.setTextColor(TFT_WHITE, bg);
+    canvas.setCursor(8, y);
+    canvas.printf("%c  %s", MACRO_KEY[i] - 32, MACRO_NAME[i]);
+    canvas.setFont(&fonts::Font0);
+    canvas.setTextColor(TFT_LIGHTGREY, bg);
+    canvas.setCursor(8, y + 18);
+    canvas.print(macroSummary(cfg.m[i]));
+  }
+  line(96, "Enter: testar opcoes ou gravar a sua");
+  footer("; . escolher  Enter abrir  ` menu");
+}
+
+void drawScEdit() {
+  String t = String("Atalho ") + (char)(MACRO_KEY[scSel] - 32) + " - " + MACRO_NAME[scSel];
+  header(t.c_str(), TFT_GREENYELLOW);
+  line(22, "Atual: " + macroSummary(cfg.m[scSel], 31), TFT_CYAN);
+  drawList(36, 6, scItems, scCount, scItem, TFT_DARKGREEN);
+  if (runActive) footer("Testando... qualquer tecla para");
+  else footer("Enter testar   S salvar   ` voltar");
+}
+
+Macro rec;
+uint32_t recLast = 0;
+
+void startRecord() {
+  rec.n = 0;
+  rec.addr = PHILIPS_ADDR;
+  mode = M_RECORD;
+}
+
+void recordKey(char c) {
+  uint8_t cmd;
+  if (c >= '0' && c <= '9') {
+    cmd = c - '0';
+  } else {
+    int b = btnForKey(c);
+    if (b < 0) return;
+    cmd = (b == B_PLAY) ? BTN[B_PLAY].cmd : cfg.b[b].cmd;
+  }
+  if (rec.n >= MACRO_MAX) {
+    setStatus("Limite de 24 passos");
+    return;
+  }
+  uint32_t now = millis();
+  if (rec.n > 0) {
+    uint32_t d = now - recLast;
+    rec.wait[rec.n - 1] = d < 150 ? 150 : d > 4000 ? 4000 : d;
+  }
+  rec.cmd[rec.n] = cmd;
+  rec.wait[rec.n] = 0;
+  rec.n++;
+  recLast = now;
+  sendRC6(rec.addr, cmd, true);
+}
+
+void drawRecord() {
+  String t = String("Gravando atalho ") + (char)(MACRO_KEY[scSel] - 32);
+  header(t.c_str(), TFT_RED);
+  line(24, "Use as teclas normais do controle");
+  line(34, "(Fontes = E, setas, Enter = OK...).");
+  line(44, "Cada tecla ja vai para a TV e entra");
+  line(54, "na sequencia, com o mesmo tempo.");
+  line(72, String("Passos: ") + rec.n, TFT_YELLOW);
+  line(84, macroSummary(rec), TFT_CYAN);
+  footer("Tab salvar            ` cancelar");
 }
 
 // ---------- Explorar ----------
@@ -277,10 +443,7 @@ bool exAuto = false, exBinding = false;
 uint32_t exAt = 0;
 static const uint32_t EX_INTERVAL = 1500;
 
-void exSend() {
-  sendRC6(exAddr, exCmd, true);
-  lastSendAt = millis();
-}
+void exSend() { sendRC6(exAddr, exCmd, true); }
 
 void exAdjust(int d) {
   uint8_t* f = exField == 0 ? &exCmd : &exAddr;
@@ -289,7 +452,6 @@ void exAdjust(int d) {
 
 void drawExplore() {
   header("Explorar codigos RC6", TFT_GREENYELLOW);
-  sendDot();
   const char* labels[2] = {"Comando", "Endereco"};
   uint8_t vals[2] = {exCmd, exAddr};
   for (int i = 0; i < 2; i++) {
@@ -306,19 +468,27 @@ void drawExplore() {
     canvas.setCursor(x + 40, 35);
     canvas.print(hex2(vals[i]));
   }
-  canvas.setFont(&fonts::Font0);
   if (exBinding) line(64, "Aperte a tecla p/ gravar (` cancela)", TFT_ORANGE);
   else if (exAuto) line(64, "AUTO: testando... aperte uma tecla", TFT_ORANGE);
-  else statusLine(64);
   line(78, "Enter enviar     Tab trocar campo");
   line(88, ", / -1 +1        ; . +16 -16");
   line(98, "A testar sozinho (1 a cada 1,5 s)");
-  line(108, "B gravar numa tecla do controle");
+  line(108, "B gravar numa tecla (vale T e I)");
   footer("` menu");
 }
 
 void exBind(char c) {
   exBinding = false;
+  int mc = macroForKey(c);
+  if (mc >= 0) {
+    Macro& m = cfg.m[mc];
+    m.n = 0;
+    m.addr = exAddr;
+    macroAdd(m, exCmd);
+    saveConfig();
+    setStatus(String("Gravado no atalho ") + MACRO_NAME[mc]);
+    return;
+  }
   int b = btnForKey(c);
   if (b < 0) {
     setStatus("Essa tecla nao tem botao");
@@ -331,12 +501,11 @@ void exBind(char c) {
 
 // ---------- Restaurar ----------
 void drawReset() {
-  header("Restaurar teclas", TFT_GOLD);
-  line(30, "Volta todas as teclas para os codigos");
-  line(40, "originais da Philips (apaga o que foi");
-  line(50, "gravado no Explorar).");
+  header("Restaurar padrao", TFT_GOLD);
+  line(30, "Volta todas as teclas e os atalhos");
+  line(40, "T e I para o padrao (apaga o que foi");
+  line(50, "gravado).");
   line(70, "Enter confirmar", TFT_GREEN);
-  statusLine(90);
   footer("` menu");
 }
 
@@ -358,6 +527,7 @@ char keyFromState() {
 
 void goMenu() {
   exAuto = exBinding = false;
+  runActive = false;
   textMode = false;
   if (bleStarted && ble.isConnected()) ble.releaseAll();
   mode = M_MENU;
@@ -369,12 +539,20 @@ void openMenuItem(int i) {
   switch (i) {
     case 0: mode = M_IR; break;
     case 1: mode = M_BT; startBle(); break;
-    case 2: mode = M_EXPLORE; break;
-    case 3: mode = M_RESET; break;
+    case 2: mode = M_SHORTCUTS; break;
+    case 3: mode = M_EXPLORE; break;
+    case 4: mode = M_RESET; break;
   }
 }
 
 void onKey(char c) {
+  // Qualquer tecla interrompe um atalho em andamento
+  if (runActive) {
+    runActive = false;
+    setStatus("Atalho interrompido");
+    return;
+  }
+
   switch (mode) {
     case M_MENU:
       if (c == ';') menuSel = (menuSel + MENU_COUNT - 1) % MENU_COUNT;
@@ -386,6 +564,12 @@ void onKey(char c) {
     case M_IR: {
       if (c == KEY_EXIT) return goMenu();
       if (c >= '0' && c <= '9') return irDigit(c);
+      int mc = macroForKey(c);
+      if (mc >= 0) {
+        lastName = MACRO_NAME[mc];
+        startMacro(cfg.m[mc], MACRO_NAME[mc]);
+        return;
+      }
       int b = btnForKey(c);
       if (b >= 0) irButton(b, true);
       return;
@@ -399,7 +583,60 @@ void onKey(char c) {
       if (textMode) return btText(c);
       if (c == KEY_EXIT) return goMenu();
       if (c >= '0' && c <= '9') return btText(c);
+      if (macroForKey(c) >= 0) return setStatus("Atalhos T e I: so no modo IR");
       if (btnForKey(c) >= 0) btButton(btnForKey(c));
+      return;
+
+    case M_SHORTCUTS:
+      if (c == KEY_EXIT) return goMenu();
+      if (c == ';' || c == '.') scSel = (scSel + 1) % MC_COUNT;
+      else if (c == 't' || c == 'T') scSel = MC_TV;
+      else if (c == 'i' || c == 'I') scSel = MC_HDMI;
+      if (c == '\n' || c == 't' || c == 'T' || c == 'i' || c == 'I') {
+        buildScItems();
+        scItem = 0;
+        mode = M_SC_EDIT;
+      }
+      return;
+
+    case M_SC_EDIT: {
+      if (c == KEY_EXIT) {
+        mode = M_SHORTCUTS;
+        return;
+      }
+      bool isRec = scItem == scCount - 1;
+      if (c == ';') scItem = (scItem + scCount - 1) % scCount;
+      else if (c == '.') scItem = (scItem + 1) % scCount;
+      else if (c == '\n') {
+        if (isRec) return startRecord();
+        Macro m;
+        buildPreset(scSel, scItem, m);
+        startMacro(m, "Teste");
+      } else if (c == 's' || c == 'S') {
+        if (isRec) return startRecord();
+        buildPreset(scSel, scItem, cfg.m[scSel]);
+        saveConfig();
+        setStatus(String("Salvo no atalho ") + MACRO_NAME[scSel]);
+      }
+      return;
+    }
+
+    case M_RECORD:
+      if (c == KEY_EXIT) {
+        setStatus("Gravacao cancelada");
+        mode = M_SC_EDIT;
+      } else if (c == '\t') {
+        if (rec.n == 0) {
+          setStatus("Nada gravado");
+        } else {
+          cfg.m[scSel] = rec;
+          saveConfig();
+          setStatus(String("Salvo no atalho ") + MACRO_NAME[scSel]);
+        }
+        mode = M_SC_EDIT;
+      } else {
+        recordKey(c);
+      }
       return;
 
     case M_EXPLORE:
@@ -436,7 +673,7 @@ void onKey(char c) {
       if (c == '\n') {
         loadDefaults();
         saveConfig();
-        setStatus("Pronto! Teclas restauradas");
+        setStatus("Pronto! Padrao restaurado");
       }
       return;
   }
@@ -484,7 +721,7 @@ void loop() {
   }
 
   // Repeticao ao segurar (setas, volume, canal, << >>) no controle IR
-  if (mode == M_IR && heldKey && M5Cardputer.Keyboard.isPressed()) {
+  if (mode == M_IR && !runActive && heldKey && M5Cardputer.Keyboard.isPressed()) {
     int b = btnForKey(heldKey);
     uint32_t now = millis();
     if (b >= 0 && BTN[b].repeat && now - heldSince > 400 && now - lastRepeat > 120) {
@@ -492,6 +729,8 @@ void loop() {
       lastRepeat = now;
     }
   }
+
+  macroTick();
 
   if (mode == M_EXPLORE && exAuto && millis() - exAt > EX_INTERVAL) {
     exCmd++;
@@ -504,6 +743,9 @@ void loop() {
     case M_MENU: drawMenu(); break;
     case M_IR: drawIR(); break;
     case M_BT: drawBT(); break;
+    case M_SHORTCUTS: drawShortcuts(); break;
+    case M_SC_EDIT: drawScEdit(); break;
+    case M_RECORD: drawRecord(); break;
     case M_EXPLORE: drawExplore(); break;
     case M_RESET: drawReset(); break;
   }
