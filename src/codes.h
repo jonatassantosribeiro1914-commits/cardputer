@@ -1,60 +1,85 @@
-// Botoes e codigos IR da Smart TV Philips Ambilight (PUG7908/78 e linha Ambilight).
-// Protocolo RC6 modo 0, endereco 0x00, 36 kHz.
-// Codigos conferidos no banco publico Flipper-IRDB (github.com/UberGuidoZ/Flipper-IRDB):
-// Philips_TV_7956_Series, Philips_TV_48OLED806 e Philips_50PUT6103_79 usam os mesmos valores.
+// Botoes e codigos IR dos aparelhos suportados.
+//
+// Philips Ambilight (PUG7908/78 e linha Ambilight): RC6 modo 0, endereco 0x00.
+//   Conferido no Flipper-IRDB: Philips_TV_7956_Series, Philips_TV_48OLED806,
+//   Philips_50PUT6103_79 (todos com os mesmos valores).
+//
+// HTV 8: NEC estendido, endereco 80 FF. A HTV ligou com o codigo de Ligar do
+//   controle Starcom 9947 HD (Flipper-IRDB: Cable_Boxes/Starcom/Starcom_9947_HD.ir),
+//   entao o resto dos botoes vem desse mesmo arquivo.
 #pragma once
 #include <Arduino.h>
+
+enum Dev : uint8_t { DEV_PHILIPS, DEV_HTV, DEV_COUNT };
+enum Proto : uint8_t { P_RC6, P_NEC };
+
+struct Device {
+  const char* name;
+  Proto proto;
+  uint8_t a0, a1;      // endereco (RC6 usa so a0)
+  uint8_t digitBase;   // comando do numero 0 (1..9 vem em seguida)
+};
+
+static const Device DEVICES[DEV_COUNT] = {
+  {"Philips", P_RC6, 0x00, 0x00, 0x00},
+  {"HTV 8",   P_NEC, 0x80, 0xFF, 0x10},
+};
+
+static const int16_t NONE = -1;
 
 enum Btn : uint8_t {
   B_POWER, B_UP, B_DOWN, B_LEFT, B_RIGHT, B_OK, B_BACK, B_HOME,
   B_MENU, B_OPTIONS, B_AMBILIGHT, B_VOLUP, B_VOLDN, B_MUTE, B_CHUP, B_CHDN,
   B_PLAY, B_STOP, B_REW, B_FF, B_SOURCE, B_GUIDE, B_YOUTUBE,
+  B_TVRADIO, B_FAV, B_AUDIO,
   B_COUNT
 };
 
 // key: tecla do Cardputer. '\n' = Enter, '\b' = Del (apagar).
 struct BtnInfo {
-  const char* name;
+  const char* name[DEV_COUNT];
   char key;
   const char* keyLabel;
-  uint8_t cmd;     // comando RC6 padrao
-  bool repeat;     // repete enquanto a tecla estiver segurada
+  int16_t cmd[DEV_COUNT];  // NONE = o aparelho nao tem esse botao
+  bool repeat;             // repete enquanto a tecla estiver segurada
 };
 
-static const uint8_t PHILIPS_ADDR = 0x00;
-static const uint8_t CMD_PAUSE = 0x30;  // Espaco alterna Play (0x2C) / Pause (0x30)
-
-// Comandos usados nos atalhos de sequencia
+// Comandos Philips usados nos atalhos de sequencia
 static const uint8_t C_SOURCES = 0x38, C_UP = 0x58, C_DOWN = 0x59, C_LEFT = 0x5A,
                      C_RIGHT = 0x5B, C_OK = 0x5C;
+static const uint8_t CMD_PAUSE = 0x30;  // Philips: Espaco alterna Play (2C) / Pause (30)
 
 static const BtnInfo BTN[B_COUNT] = {
-  {"Ligar",       'p',  "P",      0x0C, false},
-  {"Cima",        ';',  ";",      C_UP, true },
-  {"Baixo",       '.',  ".",      C_DOWN, true },
-  {"Esquerda",    ',',  ",",      C_LEFT, true },
-  {"Direita",     '/',  "/",      C_RIGHT, true },
-  {"OK",          '\n', "Enter",  C_OK, false},
-  {"Voltar",      '\b', "Del",    0x0A, false},
-  {"Home",        'h',  "H",      0x54, false},
-  {"Menu",        'm',  "M",      0xBF, false},
-  {"Opcoes",      'o',  "O",      0x40, false},
-  {"Ambilight",   'a',  "A",      0x8F, false},
-  {"Vol +",       '=',  "=",      0x10, true },
-  {"Vol -",       '-',  "-",      0x11, true },
-  {"Mudo",        'x',  "X",      0x0D, false},
-  {"Canal +",     ']',  "]",      0x20, true },
-  {"Canal -",     '[',  "[",      0x21, true },
-  {"Play/Pause",  ' ',  "Espaco", 0x2C, false},
-  {"Stop",        's',  "S",      0x31, false},
-  {"Voltar <<",   'r',  "R",      0x2B, true },
-  {"Avancar >>",  'f',  "F",      0x28, true },
-  {"Fontes",      'e',  "E",      C_SOURCES, false},
-  {"Guia TV",     'g',  "G",      0xCC, false},
-  {"YouTube",     'y',  "Y",      0x79, false},
+  //  nome Philips / HTV            tecla  rotulo     Philips    HTV     repete
+  {{"Ligar", "Ligar"},              'p',  "P",      {0x0C,     0x0A}, false},
+  {{"Cima", "Cima"},                ';',  ";",      {C_UP,     0x00}, true },
+  {{"Baixo", "Baixo"},              '.',  ".",      {C_DOWN,   0x01}, true },
+  {{"Esquerda", "Esquerda"},        ',',  ",",      {C_LEFT,   0x03}, true },
+  {{"Direita", "Direita"},          '/',  "/",      {C_RIGHT,  0x02}, true },
+  {{"OK", "OK"},                    '\n', "Enter",  {C_OK,     0x1F}, false},
+  {{"Voltar", "Voltar"},            '\b', "Del",    {0x0A,     0x40}, false},
+  {{"Home", "Home/Sair"},           'h',  "H",      {0x54,     0x1C}, false},
+  {{"Menu", "Menu"},                'm',  "M",      {0xBF,     0x1A}, false},
+  {{"Opcoes", "Info"},              'o',  "O",      {0x40,     0x0B}, false},
+  {{"Ambilight", "-"},              'a',  "A",      {0x8F,     NONE}, false},
+  {{"Vol +", "Vol +"},              '=',  "=",      {0x10,     0x44}, true },
+  {{"Vol -", "Vol -"},              '-',  "-",      {0x11,     0x45}, true },
+  {{"Mudo", "Mudo"},                'x',  "X",      {0x0D,     0x0D}, false},
+  {{"Canal +", "Canal +"},          ']',  "]",      {0x20,     0x4B}, true },
+  {{"Canal -", "Canal -"},          '[',  "[",      {0x21,     0x4C}, true },
+  {{"Play/Pause", "Play/Pause"},    ' ',  "Espaco", {0x2C,     0x46}, false},
+  {{"Stop", "Stop"},                's',  "S",      {0x31,     0x41}, false},
+  {{"Voltar <<", "Voltar <<"},      'r',  "R",      {0x2B,     0x5E}, true },
+  {{"Avancar >>", "Avancar >>"},    'f',  "F",      {0x28,     0x4A}, true },
+  {{"Fontes", "-"},                 'e',  "E",      {C_SOURCES, NONE}, false},
+  {{"Guia TV", "Guia (EPG)"},       'g',  "G",      {0xCC,     0x1E}, false},
+  {{"YouTube", "-"},                'y',  "Y",      {0x79,     NONE}, false},
+  {{"-", "TV/Radio"},               't',  "T",      {NONE,     0x5A}, false},
+  {{"-", "Favoritos"},              'v',  "V",      {NONE,     0x1B}, false},
+  {{"-", "Audio"},                  'u',  "U",      {NONE,     0x5F}, false},
 };
 
-// ---------- Atalhos de sequencia (T = TV aberta, I = HDMI) ----------
+// ---------- Atalhos de sequencia da Philips (T = TV aberta, I = HDMI) ----------
 static const int MACRO_MAX = 24;
 
 struct Macro {
@@ -103,7 +128,7 @@ static const int NUM_HDMI_PRESETS = 6;
 
 static void buildPreset(int slot, int idx, Macro& m) {
   m.n = 0;
-  m.addr = PHILIPS_ADDR;
+  m.addr = 0x00;
   if (slot == MC_TV) {
     switch (idx) {
       case 0: macroAdd(m, C_SOURCES, WAIT_MENU); macroAdd(m, C_UP, WAIT_NAV, 8); macroAdd(m, C_OK); break;
