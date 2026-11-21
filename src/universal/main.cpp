@@ -12,6 +12,7 @@
 #include <Preferences.h>
 #include <algorithm>
 #include <functional>
+#include "i18n.h"
 #include "ir_core.h"
 #include "keymap.h"
 #include "builtins.h"
@@ -28,7 +29,7 @@ int W = 240, H = 135;
 bool sdOk = false;
 
 // ---------- Estado ----------
-enum Mode { M_MENU, M_BROWSE, M_CAT, M_BRAND, M_MODEL, M_REMOTE, M_ABOUT };
+enum Mode { M_MENU, M_BROWSE, M_CAT, M_BRAND, M_MODEL, M_REMOTE, M_ABOUT, M_LANG };
 Mode mode = M_MENU;
 
 Remote remote;      // controle aberto
@@ -64,31 +65,26 @@ void footer(const char* t) {
 }
 
 // ---------- Menu ----------
-const char* MENU[] = {
-  "1  Abrir do cartao SD",
-  "2  Controles embutidos",
-  "3  Sobre / ajuda",
-};
-const int MENU_N = 3;
+const int MENU_N = 4;
 int menuSel = 0;
 
 void drawMenu() {
-  header("Controle IR Universal", TFT_CYAN);
+  header(T(S_TITLE_MAIN), TFT_CYAN);
+  const StrId items[MENU_N] = {S_MENU_SD, S_MENU_BUILTIN, S_MENU_ABOUT, S_MENU_LANG};
   canvas.setFont(&fonts::FreeSans9pt7b);
   for (int i = 0; i < MENU_N; i++) {
-    int y = 26 + i * 24;
+    int y = 22 + i * 20;
     if (i == menuSel) {
-      canvas.fillRoundRect(2, y, W - 4, 22, 4, TFT_DARKCYAN);
+      canvas.fillRoundRect(2, y, W - 4, 18, 4, TFT_DARKCYAN);
       canvas.setTextColor(TFT_WHITE, TFT_DARKCYAN);
     } else {
       canvas.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
     }
-    canvas.setCursor(8, y + 4);
-    canvas.print(MENU[i]);
+    canvas.setCursor(8, y + 2);
+    canvas.print(T(items[i]));
   }
-  line(H - 20, sdOk ? "Cartao SD: OK" : "Cartao SD: nao detectado",
-       sdOk ? TFT_GREEN : TFT_ORANGE);
-  footer("; . mover   Enter abrir");
+  line(H - 20, sdOk ? T(S_SD_OK) : T(S_SD_NO), sdOk ? TFT_GREEN : TFT_ORANGE);
+  footer(T(S_FOOT_MENU));
 }
 
 // ---------- Navegador do SD ----------
@@ -134,12 +130,12 @@ String joinPath(const String& base, const String& name) {
 void openRemoteFromSd(const String& path);
 
 void drawBrowse() {
-  header("Cartao SD", TFT_ORANGE);
+  header(T(S_TITLE_SD), TFT_ORANGE);
   line(20, curPath, TFT_SKYBLUE);
   if (entries.empty()) {
-    line(44, "Pasta vazia ou sem arquivos .ir.");
-    line(58, "Copie a pasta Flipper-IRDB para o SD.");
-    footer("` voltar");
+    line(44, T(S_EMPTY1));
+    line(58, T(S_EMPTY2));
+    footer(T(S_FOOT_BACK));
     return;
   }
   int rows = 8, y0 = 32;
@@ -157,8 +153,8 @@ void drawBrowse() {
     canvas.print(e.dir ? "[+] " : "    ");
     canvas.print(e.name.substring(0, 36));
   }
-  char ft[48];
-  snprintf(ft, sizeof(ft), "%d/%d  Enter abrir  ` subir", browseSel + 1, (int)entries.size());
+  char ft[56];
+  snprintf(ft, sizeof(ft), "%d/%d  %s", browseSel + 1, (int)entries.size(), T(S_SUF_BROWSE));
   footer(ft);
 }
 
@@ -191,7 +187,7 @@ int catSel = 0, brandSel = 0, modelSel = 0;
 void drawPick(const char* title, uint16_t color, int count,
               int sel, std::function<String(int)> item, const char* hint) {
   header(title, color);
-  if (count == 0) { line(40, "(vazio)"); footer(hint); return; }
+  if (count == 0) { line(40, T(S_EMPTY)); footer(hint); return; }
   int rows = 8, y0 = 24;
   int first = sel - rows + 1;
   if (first < 0) first = 0;
@@ -210,21 +206,21 @@ void drawPick(const char* title, uint16_t color, int count,
 }
 
 void drawCat() {
-  drawPick("Embutidos: categoria", TFT_VIOLET, NUM_BUILTIN_CATS, catSel,
-           [](int i) { return String(BUILTIN_CATS[i].name); },
-           "Enter abrir  ` menu");
+  drawPick(T(S_TITLE_CAT), TFT_VIOLET, NUM_BUILTIN_CATS, catSel,
+           [](int i) { return String(catName(BUILTIN_CATS[i].name)); },
+           T(S_FOOT_OPEN_MENU));
 }
 void drawBrand() {
   const BCat& c = BUILTIN_CATS[catSel];
-  drawPick(c.name, TFT_VIOLET, c.n, brandSel,
+  drawPick(catName(c.name), TFT_VIOLET, c.n, brandSel,
            [&](int i) { return String(c.brand[i].name); },
-           "Enter abrir  ` voltar");
+           T(S_FOOT_OPEN_BACK));
 }
 void drawModel() {
   const BBrand& b = BUILTIN_CATS[catSel].brand[brandSel];
   drawPick(b.name, TFT_VIOLET, b.n, modelSel,
            [&](int i) { return String(b.rem[i].name); },
-           "Enter abrir  ` voltar");
+           T(S_FOOT_OPEN_BACK));
 }
 
 // ---------- Tela do controle ----------
@@ -238,17 +234,17 @@ void openRemote() {
   listMode = false;
   listSel = 0;
   mode = M_REMOTE;
-  setStatus(String(remote.btn.size()) + " botoes");
+  setStatus(String(remote.btn.size()) + " " + T(S_SUF_BTNS));
 }
 
 void openRemoteFromSd(const String& path) {
-  setStatus("Lendo...");
+  setStatus(T(S_READING));
   if (!loadIrFile(SD, path, remote)) {
-    setStatus("Erro ao ler o arquivo");
+    setStatus(T(S_ERR_READ));
     return;
   }
   if (remote.btn.empty()) {
-    setStatus("Arquivo sem botoes");
+    setStatus(T(S_ERR_NOBTN));
     return;
   }
   remoteSource = "sd:" + path;
@@ -260,7 +256,7 @@ void sendBtnIdx(int i, bool newPress) {
   if (i < 0 || i >= (int)remote.btn.size()) return;
   const Button& b = remote.btn[i];
   if (b.proto == PR_UNSUPPORTED && b.raw.empty()) {
-    setStatus(b.name + ": protocolo nao suportado");
+    setStatus(b.name + T(S_ST_UNSUP));
     return;
   }
   if (newPress || !b.raw.empty()) ir.sendButton(b);
@@ -288,7 +284,7 @@ void drawRemoteGrid() {
   for (int s = 0; s < NUM_SLOTS; s++) {
     if (km.slotBtn[s] < 0) continue;
     any = true;
-    chip(x, y, colW - 3, SLOTS[s].keyLabel, SLOTS[s].shortName, TFT_DARKCYAN);
+    chip(x, y, colW - 3, SLOTS[s].keyLabel, SLOTS[s].shortName[curLang], TFT_DARKCYAN);
     y += 16;
     if (y + 14 > maxY) {
       y = 22;
@@ -301,11 +297,11 @@ void drawRemoteGrid() {
   for (int d = 0; d < 10; d++) if (km.digit[d] >= 0) hasDigit = true;
   if (hasDigit && x + colW <= W) {
     if (y + 14 > maxY) { y = 22; x += colW; }
-    if (x < W) chip(x, y, colW - 3, "0-9", "Numeros", TFT_DARKGREEN);
+    if (x < W) chip(x, y, colW - 3, "0-9", T(S_LBL_NUMBERS), TFT_DARKGREEN);
   }
   if (!any && !hasDigit)
-    line(40, "Nenhuma tecla reconhecida. Tab = lista.");
-  footer("Tab lista completa          ` voltar");
+    line(40, T(S_NOKEYS));
+  footer(T(S_FOOT_REMOTE));
 }
 
 void drawRemoteList() {
@@ -325,8 +321,8 @@ void drawRemoteList() {
     canvas.setTextColor(on ? TFT_WHITE : TFT_DARKGREY, on ? TFT_DARKCYAN : TFT_BLACK);
     canvas.print(protoLabel(remote.btn[i].proto));
   }
-  char ft[48];
-  snprintf(ft, sizeof(ft), "%d/%d  Enter enviar  Tab grade", listSel + 1, n);
+  char ft[56];
+  snprintf(ft, sizeof(ft), "%d/%d  %s", listSel + 1, n, T(S_SUF_LIST));
   footer(ft);
 }
 
@@ -337,17 +333,41 @@ void drawRemote() {
 
 // ---------- Sobre ----------
 void drawAbout() {
-  header("Sobre / ajuda", TFT_GOLD);
-  line(24, "Controle IR Universal para Cardputer.");
-  line(36, "Le arquivos .ir do Flipper Zero no SD.");
-  line(52, "1. Formate o SD em FAT32.");
-  line(62, "2. Copie a pasta Flipper-IRDB (ou seus");
-  line(72, "   proprios arquivos .ir) para o SD.");
-  line(82, "3. Menu > Abrir do cartao SD > escolha");
-  line(92, "   a marca e o aparelho.");
-  line(104, "As teclas sao distribuidas pelo nome do", TFT_CYAN);
-  line(114, "botao. Tab mostra a lista completa.", TFT_CYAN);
-  footer("` menu");
+  header(T(S_TITLE_ABOUT), TFT_GOLD);
+  line(24, T(S_ABOUT1));
+  line(36, T(S_ABOUT2));
+  line(52, T(S_ABOUT3));
+  line(62, T(S_ABOUT4));
+  line(72, T(S_ABOUT5));
+  line(82, T(S_ABOUT6));
+  line(92, T(S_ABOUT7));
+  line(104, T(S_ABOUT8), TFT_CYAN);
+  line(114, T(S_ABOUT9), TFT_CYAN);
+  footer(T(S_FOOT_MENUBACK));
+}
+
+// ---------- Idioma ----------
+int langSel = 0;
+void drawLang() {
+  header(T(S_TITLE_LANG), TFT_GREENYELLOW);
+  canvas.setFont(&fonts::FreeSans9pt7b);
+  for (int i = 0; i < LANG_COUNT; i++) {
+    int y = 28 + i * 24;
+    bool on = i == langSel;
+    if (on) {
+      canvas.fillRoundRect(2, y, W - 4, 22, 4, TFT_DARKGREEN);
+      canvas.setTextColor(TFT_WHITE, TFT_DARKGREEN);
+    } else {
+      canvas.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+    }
+    canvas.setCursor(10, y + 4);
+    canvas.print(LANG_NAME[i]);
+    if (i == curLang) {
+      canvas.setCursor(W - 20, y + 4);
+      canvas.print("*");
+    }
+  }
+  footer(T(S_FOOT_LANG));
 }
 
 // ---------- Teclado ----------
@@ -386,13 +406,13 @@ void onRemoteKey(char c) {
   if (c >= '0' && c <= '9') {
     int d = km.digit[c - '0'];
     if (d >= 0) sendBtnIdx(d, true);
-    else setStatus("Sem numero nesse controle");
+    else setStatus(T(S_ST_NONUM));
     return;
   }
   int s = slotForKey(c);
   if (s >= 0) {
     if (km.slotBtn[s] >= 0) sendBtnIdx(km.slotBtn[s], true);
-    else setStatus(String("Sem botao ") + SLOTS[s].shortName);
+    else setStatus(String(T(S_ST_NOBTN)) + SLOTS[s].shortName[curLang]);
   }
 }
 
@@ -401,17 +421,20 @@ void onKey(char c) {
     case M_MENU:
       if (c == ';') menuSel = (menuSel + MENU_N - 1) % MENU_N;
       else if (c == '.') menuSel = (menuSel + 1) % MENU_N;
-      else if (c == '\n' || (c >= '1' && c <= '3')) {
-        if (c >= '1' && c <= '3') menuSel = c - '1';
+      else if (c == '\n' || (c >= '1' && c <= '4')) {
+        if (c >= '1' && c <= '4') menuSel = c - '1';
         if (menuSel == 0) {
-          if (!sdOk) { setStatus("Cartao SD nao detectado"); return; }
+          if (!sdOk) { setStatus(T(S_SD_NOTDET)); return; }
           curPath = "/";
           readDir(curPath);
           mode = M_BROWSE;
         } else if (menuSel == 1) {
           mode = M_CAT;
-        } else {
+        } else if (menuSel == 2) {
           mode = M_ABOUT;
+        } else {
+          langSel = curLang;
+          mode = M_LANG;
         }
       }
       return;
@@ -457,6 +480,18 @@ void onKey(char c) {
     case M_ABOUT:
       if (c == KEY_EXIT) mode = M_MENU;
       return;
+
+    case M_LANG:
+      if (c == KEY_EXIT) mode = M_MENU;
+      else if (c == ';') langSel = (langSel + LANG_COUNT - 1) % LANG_COUNT;
+      else if (c == '.') langSel = (langSel + 1) % LANG_COUNT;
+      else if (c == '\n') {
+        curLang = langSel;
+        prefs.putUChar("lang", curLang);
+        setStatus(T(S_LANG_SAVED));
+        mode = M_MENU;
+      }
+      return;
   }
 }
 
@@ -476,6 +511,8 @@ void setup() {
   drawSplashJSR(canvas, W, H);
   ir.begin();
   prefs.begin("iruniv", false);
+  curLang = prefs.getUChar("lang", LANG_PT);
+  if (curLang >= LANG_COUNT) curLang = LANG_PT;
 
   SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
   sdOk = SD.begin(SD_CS, SPI, 25000000);
@@ -517,6 +554,7 @@ void loop() {
     case M_MODEL: drawModel(); break;
     case M_REMOTE: drawRemote(); break;
     case M_ABOUT: drawAbout(); break;
+    case M_LANG: drawLang(); break;
   }
   canvas.pushSprite(0, 0);
   delay(15);

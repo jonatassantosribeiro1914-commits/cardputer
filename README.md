@@ -25,6 +25,7 @@ Copie arquivos `.ir` (formato Flipper Zero) para um cartão SD em FAT32 e o Card
    - **TVs**: Samsung (5), LG (5), Philips (5), TCL (5), Sony (3), Hisense (3) e a **HTV 8**.
    - **Ar-condicionado**: LG, Samsung, Midea, Gree, Fujitsu, TCL, Daikin, Panasonic, Electrolux, Carrier, Hisense, Toshiba, Mitsubishi, Haier e Sharp (um modelo principal de cada).
    - O resto dos aparelhos (outras marcas e modelos, som, projetor, etc.) continua no cartão SD.
+5. **Menu → Idioma / Language**: escolhe o idioma da interface — **Português, Español ou English**. A escolha fica salva. Os rótulos das teclas (Ligar/Encender/Power, etc.) também mudam; os nomes de botão vindos dos arquivos `.ir` seguem como no arquivo.
 
 **Teclas do ar-condicionado:** `P` liga/desliga, `=` `-` temperatura + / −, `D` modo, `N` ventilação, `W` swing, `K` timer, `C` eco, `B` turbo, `Z` sleep. Cada marca tem botões diferentes; o que não couber nas teclas aparece na lista completa (`Tab`). Como os AC mandam o estado inteiro num código só, cada botão repete o que o controle original faz.
 
