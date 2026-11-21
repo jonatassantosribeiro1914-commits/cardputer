@@ -1,5 +1,6 @@
-// Controle IR Universal para M5Stack Cardputer / Cardputer ADV (S3A)
+// OneTap IR - controle IR por atalhos para M5Stack Cardputer / Cardputer ADV (S3A)
 //
+// Um toque por botao: cada funcao numa tecla, sem rolar menu.
 // Le os arquivos .ir do Flipper Zero direto do cartao SD e distribui os
 // botoes nas teclas do Cardputer automaticamente, pelo nome. Tambem traz
 // Philips e HTV 8 embutidos, para funcionar sem cartao.

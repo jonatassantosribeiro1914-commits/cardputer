@@ -31,10 +31,12 @@ static void drawSplashJSR(M5Canvas& cv, int W, int H, uint32_t durMs = 1500) {
   cv.fillRect(cx - bw / 2, cy - bh / 2, bw, bh, TFT_BLACK);
   cv.drawString("JSR", cx, cy);
 
-  // assinatura discreta embaixo
+  // nome do produto e assinatura embaixo
   cv.setFont(&fonts::Font0);
+  cv.setTextColor(TFT_WHITE, TFT_BLACK);
+  cv.drawString("OneTap IR", cx, H - 18);
   cv.setTextColor(TFT_DARKGREY, TFT_BLACK);
-  cv.drawString("by JSR", cx, H - 10);
+  cv.drawString("by JSR", cx, H - 9);
   cv.setTextDatum(top_left);
 
   cv.pushSprite(0, 0);

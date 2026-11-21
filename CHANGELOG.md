@@ -4,7 +4,7 @@
 
 Primeira versão oficial. Dois firmwares para M5Stack Cardputer e Cardputer ADV (S3A).
 
-### Controle IR Universal
+### OneTap IR
 - Lê arquivos `.ir` (formato Flipper Zero) do **cartão SD** e vira controle de quase
   qualquer aparelho, navegando por pastas → marca → modelo.
 - Distribui os botões nas **teclas do Cardputer pelo nome** (Ligar=P, volume, setas,
@@ -15,7 +15,7 @@ Primeira versão oficial. Dois firmwares para M5Stack Cardputer e Cardputer ADV 
 - **Idiomas da interface:** Português, Español, English (escolha salva).
 - Tela de abertura com a marca JSR.
 
-### Controle Philips + HTV 8
+### OneTap TV (Philips + HTV 8)
 - Controle fixo da Philips Ambilight (RC6) e da HTV 8 (NEC), com atalhos T (TV aberta)
   e I (HDMI) por sequência e modo Bluetooth.
 

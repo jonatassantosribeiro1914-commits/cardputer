@@ -8,7 +8,7 @@ Este guia mostra como gravar o firmware e como enviá-lo para a loja.
 > podem variar um pouco; o essencial (arquivo, endereço e chip) continua igual.
 
 ## Arquivo e parâmetros corretos
-- **Arquivo:** `controle-ir-universal-cardputer.bin` (o `-cardputer.bin`, que já inclui
+- **Arquivo:** `onetap-ir-cardputer.bin` (o `-cardputer.bin`, que já inclui
   bootloader + partições + app).
 - **Endereço de gravação:** `0x0`
 - **Chip:** ESP32-S3
@@ -25,7 +25,7 @@ Baixe o arquivo na página de releases do repositório:
 1. Conecte o Cardputer no USB.
 2. No M5Burner, use a opção de **firmware personalizado / Burn custom** (ícone de
    adicionar `.bin` ou aba "User Custom", conforme a versão).
-3. Selecione `controle-ir-universal-cardputer.bin`, endereço **0x0**, chip ESP32-S3.
+3. Selecione `onetap-ir-cardputer.bin`, endereço **0x0**, chip ESP32-S3.
 4. Clique **Burn**. Se o aparelho não for detectado, segure o botão **G0** ao conectar.
 
 ## Passo 3 — Enviar para a loja do M5Burner
@@ -37,7 +37,7 @@ A M5Stack revisa firmwares de terceiros antes de listar. O caminho atual:
 2. Preencha os campos com o texto pronto a seguir.
 
 ### Dados sugeridos para o cadastro
-- **Nome:** Controle IR Universal (Cardputer)
+- **Nome:** OneTap IR (Cardputer)
 - **Versão:** 1.0.0
 - **Categoria:** Tools / Remote
 - **Dispositivo:** Cardputer (ESP32-S3)

@@ -1,11 +1,11 @@
-# Controles IR para Cardputer
+# OneTap IR
 
-Este repositório tem **dois firmwares** para o **M5Stack Cardputer** e o **Cardputer ADV (S3A)**:
+**Um toque por botão.** Controle remoto infravermelho para o **M5Stack Cardputer** e o **Cardputer ADV (S3A)** em que cada função fica numa **tecla** — nada de rolar menu pra cima e pra baixo pra achar o volume. Dois firmwares:
 
 | Firmware | Para quê | Arquivos na release |
 |---|---|---|
-| **Controle IR Universal** | Lê os arquivos `.ir` do Flipper Zero do **cartão SD** e vira controle de **qualquer aparelho** do banco. Traz Philips e HTV embutidos. | `controle-ir-universal-*` |
-| **Controle Philips + HTV 8** | Controle fixo e enxuto só da Philips Ambilight e da HTV 8, com os atalhos T/I e Bluetooth. | `controle-tv-*` |
+| **OneTap IR** | Lê os arquivos `.ir` do Flipper Zero do **cartão SD** e vira controle de **qualquer aparelho** do banco. Traz TVs e ar-condicionado embutidos. | `onetap-ir-*` |
+| **OneTap TV** | Controle fixo e enxuto da Philips Ambilight e da HTV 8, com os atalhos T/I e Bluetooth. | `onetap-tv-*` |
 
 Os dois usam a mesma ideia: **cada botão numa tecla do Cardputer**, sem ficar navegando menu.
 
@@ -16,15 +16,15 @@ Os dois usam a mesma ideia: **cada botão numa tecla do Cardputer**, sem ficar n
 Pegue a versão mais recente na página de **[Releases](https://github.com/jonatassantosribeiro1914-commits/cardputer/releases)** (procure a `v1.0.0` ou a mais nova).
 
 **Três formas de instalar:**
-1. **Cartão SD (Launcher):** copie `controle-ir-universal-launcher.bin` para o SD e, no Launcher do Cardputer, vá em **SD → arquivo → Install**.
-2. **USB pelo navegador:** abra o [gravador web](https://espressif.github.io/esptool-js/) no **Chrome ou Edge**, conecte o Cardputer e grave `controle-ir-universal-cardputer.bin` no endereço **0x0** (chip ESP32-S3). Se não detectar, segure o botão **G0** ao conectar.
+1. **Cartão SD (Launcher):** copie `onetap-ir-launcher.bin` para o SD e, no Launcher do Cardputer, vá em **SD → arquivo → Install**.
+2. **USB pelo navegador:** abra o [gravador web](https://espressif.github.io/esptool-js/) no **Chrome ou Edge**, conecte o Cardputer e grave `onetap-ir-cardputer.bin` no endereço **0x0** (chip ESP32-S3). Se não detectar, segure o botão **G0** ao conectar.
 3. **M5Burner (app da M5Stack):** veja [docs/publicar-no-m5burner.md](docs/publicar-no-m5burner.md).
 
 Pacote de controles para o cartão SD: `controles-ir-sd.zip` na mesma release.
 
 ---
 
-# Controle IR Universal
+# OneTap IR (firmware universal)
 
 Copie arquivos `.ir` (formato Flipper Zero) para um cartão SD em FAT32 e o Cardputer vira controle de quase qualquer TV, som, projetor, receptor ou ar-condicionado.
 
@@ -46,7 +46,7 @@ Protocolos suportados: NEC, NECext, Samsung32, RC5, RC5X, RC6, Sony (SIRC) e rep
 
 ---
 
-# Controle Philips Ambilight + HTV 8
+# OneTap TV (Philips Ambilight + HTV 8)
 
 Firmware fixo e enxuto para dois aparelhos:
 - Smart TV **Philips Ambilight PUG7908/78** (Google TV), e provavelmente outras Philips Ambilight recentes
@@ -140,8 +140,8 @@ Escolha o firmware:
 
 | Firmware | Pelo cartão SD (Launcher) | Pelo USB (endereço 0x0) |
 |---|---|---|
-| Controle IR Universal | `controle-ir-universal-launcher.bin` | `controle-ir-universal-cardputer.bin` |
-| Controle Philips + HTV 8 | `controle-tv-launcher.bin` | `controle-tv-cardputer.bin` |
+| OneTap IR | `onetap-ir-launcher.bin` | `onetap-ir-cardputer.bin` |
+| OneTap TV | `onetap-tv-launcher.bin` | `onetap-tv-cardputer.bin` |
 
 ### Pelo cartão SD (Launcher)
 1. Copie o arquivo `*-launcher.bin` para o cartão SD.
@@ -150,7 +150,7 @@ Escolha o firmware:
 ### Pelo USB
 Grave o arquivo `*-cardputer.bin` no endereço **0x0** pelo navegador em <https://espressif.github.io/esptool-js/>, ou com:
 ```bash
-esptool.py --chip esp32s3 write_flash 0x0 controle-ir-universal-cardputer.bin
+esptool.py --chip esp32s3 write_flash 0x0 onetap-ir-cardputer.bin
 ```
 
 ### Compilar no PC
