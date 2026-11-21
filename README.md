@@ -19,7 +19,9 @@ Copie a pasta **Flipper-IRDB** (ou seus próprios arquivos `.ir`) para um cartã
 1. **Menu → Abrir do cartão SD**: navegue por categoria → marca → aparelho (`;` `.` para mover, `Enter` para abrir, `` ` `` para subir).
 2. Ao abrir um controle, o firmware **distribui os botões nas teclas** pelo nome: `P` Ligar, setas `;` `.` `,` `/`, `Enter` OK, `Del` Voltar, `=` `-` Volume, `[` `]` Canal, `0`–`9` números, `H` Home, `M` Menu, `E` Fontes, `G` Guia, e outros.
 3. O que não for reconhecido aparece na **lista completa** (`Tab`): `;` `.` para mover e `Enter` para enviar.
-4. **Menu → Controles embutidos**: Philips e HTV 8, para usar sem cartão.
+4. **Menu → Controles embutidos**: TVs já gravadas no firmware, para usar **sem cartão**. Navegue por categoria → marca → modelo:
+   - **Samsung** (5), **LG** (5), **Philips** (5), **TCL** (5), **Sony** (3), **Hisense** (3) e a **HTV 8**.
+   - O resto dos aparelhos (outras marcas, som, projetor, ar-condicionado, etc.) continua no cartão SD.
 
 Protocolos suportados: NEC, NECext, Samsung32, RC5, RC5X, RC6, Sony (SIRC) e replay de sinais `raw`. Os códigos vêm do banco público [Flipper-IRDB](https://github.com/UberGuidoZ/Flipper-IRDB).
 
