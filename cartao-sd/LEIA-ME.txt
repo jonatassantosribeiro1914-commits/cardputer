@@ -1,0 +1,29 @@
+PACOTE DE CONTROLES IR - para o firmware Controle IR Universal (Cardputer)
+==========================================================================
+
+O que e isto
+------------
+Uma selecao de arquivos .ir (formato Flipper Zero) para usar no cartao SD do
+Cardputer com o firmware "Controle IR Universal". Inclui:
+
+  TVs/              marcas comuns (Samsung, LG, Philips, TCL, Sony, Panasonic,
+                    Toshiba, Hisense, Sharp, Vizio, RCA, e outras)
+  Ar-condicionado/  todas as marcas de AC do banco
+
+Como usar
+---------
+1. Formate o cartao SD em FAT32.
+2. Copie as pastas "TVs" e "Ar-condicionado" para o cartao
+   (pode ser na raiz do cartao).
+3. Coloque o cartao no Cardputer.
+4. No firmware: Menu > Abrir do cartao SD > escolha a pasta, a marca e o aparelho.
+5. As teclas sao distribuidas pelo nome do botao. Tab mostra a lista completa.
+
+Quer mais controles?
+--------------------
+Este e um recorte. O banco completo (som, projetores, receptores, etc.) esta em:
+  https://github.com/UberGuidoZ/Flipper-IRDB
+Baixe (Code > Download ZIP), descompacte e copie as pastas que quiser para o SD.
+
+Creditos dos codigos: projeto Flipper-IRDB (comunidade Flipper Zero).
+Pacote organizado por JSR.

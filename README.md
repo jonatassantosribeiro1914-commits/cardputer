@@ -13,7 +13,9 @@ Os dois usam a mesma ideia: **cada botão numa tecla do Cardputer**, sem ficar n
 
 # Controle IR Universal
 
-Copie a pasta **Flipper-IRDB** (ou seus próprios arquivos `.ir`) para um cartão SD em FAT32 e o Cardputer vira controle de quase qualquer TV, som, projetor, receptor ou ar-condicionado do banco de códigos.
+Copie arquivos `.ir` (formato Flipper Zero) para um cartão SD em FAT32 e o Cardputer vira controle de quase qualquer TV, som, projetor, receptor ou ar-condicionado.
+
+**Pacote pronto (recomendado):** baixe `controles-ir-sd.zip` na [release](https://github.com/jonatassantosribeiro1914-commits/cardputer/releases/tag/ultima-versao), descompacte e copie as pastas `TVs` e `Ar-condicionado` para o cartão SD. Os mesmos arquivos estão na pasta [`cartao-sd/`](cartao-sd) deste repositório. Para o banco completo, use o [Flipper-IRDB](https://github.com/UberGuidoZ/Flipper-IRDB).
 
 **Como funciona:**
 1. **Menu → Abrir do cartão SD**: navegue por categoria → marca → aparelho (`;` `.` para mover, `Enter` para abrir, `` ` `` para subir).

@@ -41,6 +41,11 @@ jobs:
           merge cardputer controle-tv
           merge universal controle-ir-universal
 
+      - name: Montar ZIP do pacote de controles para o SD
+        run: |
+          cd cartao-sd && zip -r -q ../controles-ir-sd.zip . && cd ..
+          ls -lh controles-ir-sd.zip
+
       - uses: actions/upload-artifact@v4
         with:
           name: firmwares
@@ -59,6 +64,7 @@ jobs:
           gh release create ultima-versao \
             controle-ir-universal-launcher.bin controle-ir-universal-cardputer.bin \
             controle-tv-launcher.bin controle-tv-cardputer.bin \
+            controles-ir-sd.zip \
             --target "$GITHUB_SHA" --prerelease \
             --title "Firmwares Cardputer - ultima versao" \
-            --notes "controle-ir-universal-launcher.bin: controle IR universal (le .ir do cartao SD), para instalar pelo Launcher. controle-tv-launcher.bin: controle Philips + HTV 8. Os arquivos *-cardputer.bin sao para gravar via USB no endereco 0x0."
+            --notes "controle-ir-universal-launcher.bin: controle IR universal (le .ir do cartao SD), para instalar pelo Launcher. controle-tv-launcher.bin: controle Philips + HTV 8. Os arquivos *-cardputer.bin sao para gravar via USB no endereco 0x0. controles-ir-sd.zip: pacote de controles (TVs + ar-condicionado) para descompactar no cartao SD."
