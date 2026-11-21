@@ -1,6 +1,33 @@
-# Controle Philips Ambilight + HTV 8 para Cardputer
+# Controles IR para Cardputer
 
-Firmware para o **M5Stack Cardputer** e o **Cardputer ADV (S3A)** que transforma ele em controle remoto de dois aparelhos:
+Este repositório tem **dois firmwares** para o **M5Stack Cardputer** e o **Cardputer ADV (S3A)**:
+
+| Firmware | Para quê | Arquivos na release |
+|---|---|---|
+| **Controle IR Universal** | Lê os arquivos `.ir` do Flipper Zero do **cartão SD** e vira controle de **qualquer aparelho** do banco. Traz Philips e HTV embutidos. | `controle-ir-universal-*` |
+| **Controle Philips + HTV 8** | Controle fixo e enxuto só da Philips Ambilight e da HTV 8, com os atalhos T/I e Bluetooth. | `controle-tv-*` |
+
+Os dois usam a mesma ideia: **cada botão numa tecla do Cardputer**, sem ficar navegando menu.
+
+---
+
+# Controle IR Universal
+
+Copie a pasta **Flipper-IRDB** (ou seus próprios arquivos `.ir`) para um cartão SD em FAT32 e o Cardputer vira controle de quase qualquer TV, som, projetor, receptor ou ar-condicionado do banco de códigos.
+
+**Como funciona:**
+1. **Menu → Abrir do cartão SD**: navegue por categoria → marca → aparelho (`;` `.` para mover, `Enter` para abrir, `` ` `` para subir).
+2. Ao abrir um controle, o firmware **distribui os botões nas teclas** pelo nome: `P` Ligar, setas `;` `.` `,` `/`, `Enter` OK, `Del` Voltar, `=` `-` Volume, `[` `]` Canal, `0`–`9` números, `H` Home, `M` Menu, `E` Fontes, `G` Guia, e outros.
+3. O que não for reconhecido aparece na **lista completa** (`Tab`): `;` `.` para mover e `Enter` para enviar.
+4. **Menu → Controles embutidos**: Philips e HTV 8, para usar sem cartão.
+
+Protocolos suportados: NEC, NECext, Samsung32, RC5, RC5X, RC6, Sony (SIRC) e replay de sinais `raw`. Os códigos vêm do banco público [Flipper-IRDB](https://github.com/UberGuidoZ/Flipper-IRDB).
+
+---
+
+# Controle Philips Ambilight + HTV 8
+
+Firmware fixo e enxuto para dois aparelhos:
 - Smart TV **Philips Ambilight PUG7908/78** (Google TV), e provavelmente outras Philips Ambilight recentes
 - TV box **HTV 8**
 
@@ -81,27 +108,32 @@ Todos os códigos vêm do banco público [Flipper-IRDB](https://github.com/UberG
 - **Philips**: RC6 modo 0, endereço `0x00`, 36 kHz. São iguais em toda a linha Ambilight; conferi nos arquivos `Philips_TV_7956_Series`, `Philips_TV_48OLED806` e `Philips_50PUT6103_79`.
 - **HTV 8**: NEC estendido, endereço `80 FF`, 38 kHz, do arquivo `Cable_Boxes/Starcom/Starcom_9947_HD.ir`.
 
-## Como gravar
+---
+
+# Como gravar
 
 Os arquivos ficam na Release **ultima-versao**:
 <https://github.com/jonatassantosribeiro1914-commits/cardputer/releases/tag/ultima-versao>
 
-| Arquivo | Para quê |
-|---|---|
-| `controle-tv-launcher.bin` | Instalar pelo **cartão SD** com o Launcher |
-| `controle-tv-cardputer.bin` | Gravar pelo **USB** no endereço 0x0 |
+Escolha o firmware:
+
+| Firmware | Pelo cartão SD (Launcher) | Pelo USB (endereço 0x0) |
+|---|---|---|
+| Controle IR Universal | `controle-ir-universal-launcher.bin` | `controle-ir-universal-cardputer.bin` |
+| Controle Philips + HTV 8 | `controle-tv-launcher.bin` | `controle-tv-cardputer.bin` |
 
 ### Pelo cartão SD (Launcher)
-1. Copie `controle-tv-launcher.bin` para o cartão SD.
+1. Copie o arquivo `*-launcher.bin` para o cartão SD.
 2. No Cardputer, abra o **Launcher** → **SD** → escolha o arquivo → **Install**.
 
 ### Pelo USB
-Grave `controle-tv-cardputer.bin` no endereço **0x0** pelo navegador em <https://espressif.github.io/esptool-js/>, ou com:
+Grave o arquivo `*-cardputer.bin` no endereço **0x0** pelo navegador em <https://espressif.github.io/esptool-js/>, ou com:
 ```bash
-esptool.py --chip esp32s3 write_flash 0x0 controle-tv-cardputer.bin
+esptool.py --chip esp32s3 write_flash 0x0 controle-ir-universal-cardputer.bin
 ```
 
 ### Compilar no PC
 ```bash
-pio run -t upload
+pio run -e universal -t upload   # controle IR universal
+pio run -e cardputer -t upload   # controle Philips + HTV 8
 ```
