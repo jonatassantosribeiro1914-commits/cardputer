@@ -6,6 +6,11 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Publicar uma release com este nome (ex.: v1.0.0). Vazio = so build."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -71,12 +76,13 @@ jobs:
             --title "Firmwares Cardputer - ultima versao" \
             --notes "controle-ir-universal-launcher.bin: controle IR universal (le .ir do cartao SD), para instalar pelo Launcher. controle-tv-launcher.bin: controle Philips + HTV 8. Os arquivos *-cardputer.bin sao para gravar via USB no endereco 0x0. controles-ir-sd.zip: pacote de controles (TVs + ar-condicionado) para descompactar no cartao SD."
 
-      - name: Publicar Release versionada (quando houver tag v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publicar Release versionada (tag v* ou dispatch com versao)
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_version != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VER="${GITHUB_REF_NAME}"
+          VER="${{ inputs.release_version }}"
+          if [ -z "$VER" ]; then VER="${GITHUB_REF_NAME}"; fi
           cat > NOTAS.md <<EOF
           # Controle IR para Cardputer $VER
 
