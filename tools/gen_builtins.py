@@ -59,6 +59,23 @@ CATALOG = [
      ("HTV 8",           ""),
    ]),
  ]),
+ ("Ar-condicionado", [
+   ("LG",         [("LP1015WNR",   "ACs/LG/LG_LP1015WNR_AC.ir")]),
+   ("Samsung",    [("AR13TYHZCWKN","ACs/Samsung/Samsung_AR13TYHZCWKN.ir")]),
+   ("Midea",      [("MAW05R1",     "ACs/Midea/Midea_AC_MAW05R1WBL.ir")]),
+   ("Gree",       [("YAPOF",       "ACs/GREE/GREE_YAPOF.ir")]),
+   ("Fujitsu",    [("ASU18RLF",    "ACs/Fujitsu/Fujitsu_AC_ASU18RLF.ir")]),
+   ("TCL",        [("TCL AC",      "ACs/TCL/Tcl.ir")]),
+   ("Daikin",     [("ARC480A41",   "ACs/Daikin/Daikin_ARC480A41.ir")]),
+   ("Panasonic",  [("CWA75C4179",  "ACs/Panasonic/Panasonic_CWA75C4179.ir")]),
+   ("Electrolux", [("ESV09CRO",    "ACs/Electrolux/Electrol_ESV09CRO_B2I.ir")]),
+   ("Carrier",    [("Orlen",       "ACs/Carrier/Carrier_orlen_ac.ir")]),
+   ("Hisense",    [("DG11J1-99",   "ACs/Hisense/Hisense_DG11J1-99_fahrenheit.ir")]),
+   ("Toshiba",    [("RG57H4",      "ACs/Toshiba/Toshiba_RG57H4.ir")]),
+   ("Mitsubishi", [("SRK35ZS-W",   "ACs/Mitsubishi/Mitsubishi_SRK35ZS-W.ir")]),
+   ("Haier",      [("AS18GD3HRA",  "ACs/Haier/Haier_AC_AS18GD3HRA.ir")]),
+   ("Sharp",      [("CVP10MX",     "ACs/Sharp/Sharp_CVP10MX.ir")]),
+ ]),
 ]
 
 # Controles embutidos manuais (nao vem de arquivo): nome -> lista de botoes
@@ -89,32 +106,53 @@ def h2(v):
     p = v.split()
     return int(p[1], 16) if len(p) > 1 else 0
 
+RAW_MAX = 800  # limite de amostras por botao raw (igual ao firmware)
+
+# Botao parsed -> dict(kind='parsed', name, proto, a0, a1, cmd)
+# Botao raw    -> dict(kind='raw',    name, freq, raw=[...])
+def manual_to_dicts(lst):
+    return [{"kind": "parsed", "name": n, "proto": p, "a0": a0, "a1": a1, "cmd": c}
+            for (n, p, a0, a1, c) in lst]
+
 def parse_ir(path):
     btns = []
-    name = proto = addr = cmd = None
-    typ = None
+    cur = {}
     def flush():
-        nonlocal name, proto, addr, cmd, typ
-        if name and typ == "parsed" and proto in PROTO:
-            a0 = h1(addr) if addr else 0
-            a1 = h2(addr) if addr else 0
-            c = h1(cmd) if cmd else 0
-            btns.append((name, PROTO[proto], a0, a1, c))
-        name = proto = addr = cmd = typ = None
+        nonlocal cur
+        nm = cur.get("name")
+        if nm:
+            if cur.get("type") == "parsed" and cur.get("protocol") in PROTO:
+                btns.append({"kind": "parsed", "name": nm,
+                             "proto": PROTO[cur["protocol"]],
+                             "a0": h1(cur.get("address", "0")),
+                             "a1": h2(cur.get("address", "0")),
+                             "cmd": h1(cur.get("command", "0"))})
+            elif cur.get("type") == "raw" and cur.get("data"):
+                vals = []
+                for x in cur["data"].split():
+                    try:
+                        vals.append(max(1, min(60000, abs(int(x)))))
+                    except ValueError:
+                        pass
+                vals = vals[:RAW_MAX]
+                if vals:
+                    freq = 38000
+                    try:
+                        freq = int(cur.get("frequency", "38000"))
+                    except ValueError:
+                        pass
+                    btns.append({"kind": "raw", "name": nm, "freq": freq, "raw": vals})
+        cur = {}
     for ln in open(path, encoding="utf-8", errors="ignore"):
         ln = ln.strip()
-        if not ln or ln.startswith("#"):
-            continue
-        if ":" not in ln:
+        if not ln or ln.startswith("#") or ":" not in ln:
             continue
         k, _, v = ln.partition(":")
         k = k.strip(); v = v.strip()
         if k == "name":
-            flush(); name = v
-        elif k == "type": typ = v
-        elif k == "protocol": proto = v
-        elif k == "address": addr = v
-        elif k == "command": cmd = v
+            flush(); cur = {"name": v}
+        elif k in ("type", "protocol", "address", "command", "frequency", "data"):
+            cur[k] = v
     flush()
     return btns
 
@@ -127,16 +165,36 @@ out.append("// Controles embutidos a partir do banco Flipper-IRDB.")
 out.append("#pragma once")
 out.append('#include "ir_core.h"')
 out.append("")
-out.append("struct BBtn { const char* name; IrProto proto; uint8_t a0, a1, cmd; };")
+out.append("struct BBtn { const char* name; IrProto proto; uint8_t a0, a1, cmd;")
+out.append("              uint16_t freq; const uint16_t* raw; uint16_t rn; };")
 out.append("struct BRemote { const char* name; const BBtn* btn; uint16_t n; };")
 out.append("struct BBrand { const char* name; const BRemote* rem; uint8_t n; };")
 out.append("struct BCat { const char* name; const BBrand* brand; uint8_t n; };")
 out.append("")
 
 rid = 0
-brand_blocks = []
 cat_blocks = []
 total_btn = 0
+
+def emit_btn_array(var, btns):
+    global total_btn
+    # arrays raw primeiro
+    for i, b in enumerate(btns):
+        if b["kind"] == "raw":
+            out.append(f"static const uint16_t {var}_r{i}[] = {{" +
+                       ",".join(str(x) for x in b["raw"]) + "};")
+    out.append(f"static const BBtn {var}[] = {{")
+    for i, b in enumerate(btns):
+        nm = cname(b["name"])[:18]
+        if b["kind"] == "parsed":
+            out.append(f'  {{"{nm}", {b["proto"]}, 0x{b["a0"]:02X}, 0x{b["a1"]:02X}, '
+                       f'0x{b["cmd"]:02X}, 0, nullptr, 0}},')
+        else:
+            out.append(f'  {{"{nm}", PR_RAW, 0, 0, 0, {b["freq"]}, '
+                       f'{var}_r{i}, {len(b["raw"])}}},')
+    out.append("};")
+    total_btn += len(btns)
+
 for cat, brands in CATALOG:
     brand_arr = []
     for brand, models in brands:
@@ -145,32 +203,16 @@ for cat, brands in CATALOG:
             path = os.path.join(IRDB, rel)
             key = f"{cat}:{brand}:{disp}"
             if key in MANUAL:
-                btns = MANUAL[key]
+                btns = manual_to_dicts(MANUAL[key])
             elif os.path.exists(path):
                 btns = parse_ir(path)
             else:
                 sys.stderr.write(f"FALTA: {rel}\n"); continue
             if not btns:
                 sys.stderr.write(f"VAZIO: {rel}\n"); continue
-            total_btn += len(btns)
             var = f"b_{rid}"; rid += 1
-            out.append(f"static const BBtn {var}[] = {{")
-            for nm, pr, a0, a1, c in btns:
-                out.append(f'  {{"{cname(nm)[:18]}", {pr}, 0x{a0:02X}, 0x{a1:02X}, 0x{c:02X}}},')
-            out.append("};")
+            emit_btn_array(var, btns)
             rem_arr.append((disp, var, len(btns)))
-        # brand tem entradas manuais?
-        for key, btns in MANUAL.items():
-            c2, b2, d2 = key.split(":")
-            if c2 == cat and b2 == brand and not any(r[0]==d2 for r in rem_arr):
-                var = f"b_{rid}"; rid += 1
-                total_btn += len(btns)
-                out.append(f"static const BBtn {var}[] = {{")
-                for nm, pr, a0, a1, c in btns:
-                    out.append(f'  {{"{cname(nm)[:18]}", {pr}, 0x{a0:02X}, 0x{a1:02X}, 0x{c:02X}}},')
-                out.append("};")
-                rem_arr.append((d2, var, len(btns)))
-        rvar = f"r_{len(brand_arr)}_{cat}".replace(" ", "")
         rvar = f"rem_{rid}"; rid += 1
         out.append(f"static const BRemote {rvar}[] = {{")
         for disp, var, n in rem_arr:

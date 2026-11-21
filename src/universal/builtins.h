@@ -10,12 +10,15 @@ static void loadBuiltinRemote(const BRemote& br, Remote& out) {
   out.btn.clear();
   out.btn.reserve(br.n);
   for (int i = 0; i < br.n; i++) {
+    const BBtn& s = br.btn[i];
     Button b;
-    b.name = br.btn[i].name;
-    b.proto = br.btn[i].proto;
-    b.a0 = br.btn[i].a0;
-    b.a1 = br.btn[i].a1;
-    b.cmd = br.btn[i].cmd;
+    b.name = s.name;
+    b.proto = s.proto;
+    b.a0 = s.a0;
+    b.a1 = s.a1;
+    b.cmd = s.cmd;
+    b.freq = s.freq ? s.freq : 38000;
+    if (s.raw && s.rn) b.raw.assign(s.raw, s.raw + s.rn);
     out.btn.push_back(b);
   }
 }

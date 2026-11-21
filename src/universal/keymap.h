@@ -21,8 +21,8 @@ static const Slot SLOTS[] = {
   {'\b', "Del",   "Voltar", "back|return|exit|voltar|sair|escape"},
   {'h',  "H",     "Home",   "home|inicio|smart|smarthub"},
   {'m',  "M",     "Menu",   "menu|main"},
-  {'=',  "=",     "Vol+",   "vol_up|vol+|volume_up|volup|vol up|volum+"},
-  {'-',  "-",     "Vol-",   "vol_dn|vol-|volume_down|voldn|vol dn|vol down|volum-"},
+  {'=',  "=",     "Vol+/T+","vol_up|vol+|volume_up|volup|vol up|volum+|temp+|temp_up|temp up|t+"},
+  {'-',  "-",     "Vol-/T-","vol_dn|vol-|volume_down|voldn|vol dn|vol down|volum-|temp-|temp_down|temp dn|t-"},
   {'x',  "X",     "Mudo",   "mute|mudo|silenc"},
   {']',  "]",     "Ch+",    "ch+|ch_up|ch_next|channel_up|chup|ch up|prog+|p_up"},
   {'[',  "[",     "Ch-",    "ch-|ch_dn|ch_prev|channel_down|chdn|ch dn|prog-|p_dn"},
@@ -38,6 +38,14 @@ static const Slot SLOTS[] = {
   {'t',  "T",     "TV",     "tv|antenna|live|dtv|atv"},
   {'u',  "U",     "Audio",  "audio|sound|sap|language"},
   {'v',  "V",     "Fav",    "fav|favorite|favorito|list"},
+  // Ar-condicionado (teclas livres; um controle e TV ou AC, nunca os dois)
+  {'d',  "D",     "Modo",   "mode|modo|cool|heat|dry|auto"},
+  {'n',  "N",     "Vent",   "fan|fan_speed|fan speed|vent|wind|speed"},
+  {'w',  "W",     "Swing",  "swing|oscil|verti_wind|horiz_wind|louver|air_direction|wind_direction"},
+  {'k',  "K",     "Timer",  "timer|sleep_timer"},
+  {'c',  "C",     "Eco",    "eco|econo|energy|quiet|silen"},
+  {'b',  "B",     "Turbo",  "turbo|jet|boost|powerful|high"},
+  {'z',  "Z",     "Sleep",  "sleep|dormir"},
 };
 static const int NUM_SLOTS = sizeof(SLOTS) / sizeof(SLOTS[0]);
 
