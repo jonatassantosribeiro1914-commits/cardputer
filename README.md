@@ -11,6 +11,19 @@ Os dois usam a mesma ideia: **cada botão numa tecla do Cardputer**, sem ficar n
 
 ---
 
+## Baixar / Instalar
+
+Pegue a versão mais recente na página de **[Releases](https://github.com/jonatassantosribeiro1914-commits/cardputer/releases)** (procure a `v1.0.0` ou a mais nova).
+
+**Três formas de instalar:**
+1. **Cartão SD (Launcher):** copie `controle-ir-universal-launcher.bin` para o SD e, no Launcher do Cardputer, vá em **SD → arquivo → Install**.
+2. **USB pelo navegador:** abra o [gravador web](https://espressif.github.io/esptool-js/) no **Chrome ou Edge**, conecte o Cardputer e grave `controle-ir-universal-cardputer.bin` no endereço **0x0** (chip ESP32-S3). Se não detectar, segure o botão **G0** ao conectar.
+3. **M5Burner (app da M5Stack):** veja [docs/publicar-no-m5burner.md](docs/publicar-no-m5burner.md).
+
+Pacote de controles para o cartão SD: `controles-ir-sd.zip` na mesma release.
+
+---
+
 # Controle IR Universal
 
 Copie arquivos `.ir` (formato Flipper Zero) para um cartão SD em FAT32 e o Cardputer vira controle de quase qualquer TV, som, projetor, receptor ou ar-condicionado.

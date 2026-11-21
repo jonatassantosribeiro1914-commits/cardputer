@@ -2,6 +2,8 @@ name: Build firmware
 
 on:
   push:
+    branches: ['**']
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -68,3 +70,49 @@ jobs:
             --target "$GITHUB_SHA" --prerelease \
             --title "Firmwares Cardputer - ultima versao" \
             --notes "controle-ir-universal-launcher.bin: controle IR universal (le .ir do cartao SD), para instalar pelo Launcher. controle-tv-launcher.bin: controle Philips + HTV 8. Os arquivos *-cardputer.bin sao para gravar via USB no endereco 0x0. controles-ir-sd.zip: pacote de controles (TVs + ar-condicionado) para descompactar no cartao SD."
+
+      - name: Publicar Release versionada (quando houver tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="${GITHUB_REF_NAME}"
+          cat > NOTAS.md <<EOF
+          # Controle IR para Cardputer $VER
+
+          Firmware que transforma o M5Stack Cardputer (e o Cardputer ADV / S3A) em
+          controle remoto infravermelho de TVs, ar-condicionado e muito mais.
+
+          ## Como instalar (escolha um)
+          - **Pelo cartao SD (Launcher):** copie \`controle-ir-universal-launcher.bin\`
+            para o SD e no Launcher: SD > arquivo > Install.
+          - **Pelo USB (navegador):** abra https://espressif.github.io/esptool-js/ no
+            Chrome ou Edge, conecte o Cardputer, e grave \`controle-ir-universal-cardputer.bin\`
+            no endereco **0x0** (chip ESP32-S3).
+
+          ## Arquivos
+          | Arquivo | Para que serve |
+          |---|---|
+          | controle-ir-universal-launcher.bin | Controle IR Universal (le .ir do SD) - instalar pelo Launcher |
+          | controle-ir-universal-cardputer.bin | O mesmo, para gravar via USB em 0x0 |
+          | controle-tv-launcher.bin | Controle fixo Philips Ambilight + HTV 8 - pelo Launcher |
+          | controle-tv-cardputer.bin | O mesmo, via USB em 0x0 |
+          | controles-ir-sd.zip | Pacote de controles (TVs + ar-condicionado) para o cartao SD |
+
+          Idiomas: Portugues, Espanol, English. Codigos IR do banco Flipper-IRDB.
+          EOF
+          if gh release view "$VER" >/dev/null 2>&1; then
+            gh release upload "$VER" \
+              controle-ir-universal-launcher.bin controle-ir-universal-cardputer.bin \
+              controle-tv-launcher.bin controle-tv-cardputer.bin \
+              controles-ir-sd.zip --clobber
+            gh release edit "$VER" --title "Controle IR Cardputer $VER" --notes-file NOTAS.md
+          else
+            gh release create "$VER" \
+              controle-ir-universal-launcher.bin controle-ir-universal-cardputer.bin \
+              controle-tv-launcher.bin controle-tv-cardputer.bin \
+              controles-ir-sd.zip \
+              --target "$GITHUB_SHA" \
+              --title "Controle IR Cardputer $VER" \
+              --notes-file NOTAS.md
+          fi
