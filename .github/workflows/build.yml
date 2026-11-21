@@ -21,27 +21,34 @@ jobs:
       - name: Instalar PlatformIO
         run: pip install platformio
 
-      - name: Compilar
+      - name: Compilar os dois firmwares
         run: pio run
 
-      - name: Gerar binario unico (gravar em 0x0)
+      - name: Gerar binarios (USB em 0x0 e Launcher para o SD)
         run: |
-          B=.pio/build/cardputer
           PKG=~/.platformio/packages
-          python $PKG/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin \
-            -o controle-tv-cardputer.bin \
-            0x0 $B/bootloader.bin \
-            0x8000 $B/partitions.bin \
-            0xe000 $PKG/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
-            0x10000 $B/firmware.bin
-          cp $B/firmware.bin controle-tv-launcher.bin
+          merge() {
+            env=$1; out=$2
+            B=.pio/build/$env
+            python $PKG/tool-esptoolpy/esptool.py --chip esp32s3 merge_bin \
+              -o $out-cardputer.bin \
+              0x0 $B/bootloader.bin \
+              0x8000 $B/partitions.bin \
+              0xe000 $PKG/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+              0x10000 $B/firmware.bin
+            cp $B/firmware.bin $out-launcher.bin
+          }
+          merge cardputer controle-tv
+          merge universal controle-ir-universal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: controle-tv-cardputer
+          name: firmwares
           path: |
             controle-tv-cardputer.bin
             controle-tv-launcher.bin
+            controle-ir-universal-cardputer.bin
+            controle-ir-universal-launcher.bin
 
       - name: Publicar na Release "ultima-versao"
         if: github.event_name != 'pull_request'
@@ -50,7 +57,8 @@ jobs:
         run: |
           gh release delete ultima-versao -y --cleanup-tag || true
           gh release create ultima-versao \
+            controle-ir-universal-launcher.bin controle-ir-universal-cardputer.bin \
             controle-tv-launcher.bin controle-tv-cardputer.bin \
             --target "$GITHUB_SHA" --prerelease \
-            --title "Controle Philips + HTV 8 - ultima versao" \
-            --notes "controle-tv-launcher.bin: para instalar pelo cartao SD com o Launcher. controle-tv-cardputer.bin: binario completo para gravar via USB no endereco 0x0."
+            --title "Firmwares Cardputer - ultima versao" \
+            --notes "controle-ir-universal-launcher.bin: controle IR universal (le .ir do cartao SD), para instalar pelo Launcher. controle-tv-launcher.bin: controle Philips + HTV 8. Os arquivos *-cardputer.bin sao para gravar via USB no endereco 0x0."
