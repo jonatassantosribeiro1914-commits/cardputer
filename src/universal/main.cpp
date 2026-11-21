@@ -11,6 +11,7 @@
 #include <SPI.h>
 #include <Preferences.h>
 #include <algorithm>
+#include <functional>
 #include "ir_core.h"
 #include "keymap.h"
 #include "builtins.h"
@@ -26,7 +27,7 @@ int W = 240, H = 135;
 bool sdOk = false;
 
 // ---------- Estado ----------
-enum Mode { M_MENU, M_BROWSE, M_BUILTIN, M_REMOTE, M_ABOUT };
+enum Mode { M_MENU, M_BROWSE, M_CAT, M_BRAND, M_MODEL, M_REMOTE, M_ABOUT };
 Mode mode = M_MENU;
 
 Remote remote;      // controle aberto
@@ -182,23 +183,47 @@ void browseUp() {
   readDir(curPath);
 }
 
-// ---------- Controles embutidos ----------
-int builtinSel = 0;
-void drawBuiltin() {
-  header("Controles embutidos", TFT_VIOLET);
-  canvas.setFont(&fonts::FreeSans9pt7b);
-  for (int i = 0; i < NUM_BUILTINS; i++) {
-    int y = 28 + i * 24;
-    if (i == builtinSel) {
-      canvas.fillRoundRect(2, y, W - 4, 22, 4, TFT_PURPLE);
-      canvas.setTextColor(TFT_WHITE, TFT_PURPLE);
-    } else {
-      canvas.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    }
-    canvas.setCursor(8, y + 4);
-    canvas.print(BUILTINS[i].name);
+// ---------- Controles embutidos (categoria > marca > modelo) ----------
+int catSel = 0, brandSel = 0, modelSel = 0;
+
+// Lista generica com rolagem e contador.
+void drawPick(const char* title, uint16_t color, int count,
+              int sel, std::function<String(int)> item, const char* hint) {
+  header(title, color);
+  if (count == 0) { line(40, "(vazio)"); footer(hint); return; }
+  int rows = 8, y0 = 24;
+  int first = sel - rows + 1;
+  if (first < 0) first = 0;
+  for (int r = 0; r < rows && first + r < count; r++) {
+    int i = first + r, y = y0 + r * 12;
+    bool on = i == sel;
+    if (on) canvas.fillRect(0, y - 1, W, 12, TFT_PURPLE);
+    canvas.setFont(&fonts::Font0);
+    canvas.setTextColor(on ? TFT_WHITE : TFT_LIGHTGREY, on ? TFT_PURPLE : TFT_BLACK);
+    canvas.setCursor(6, y);
+    canvas.print(item(i).substring(0, 38));
   }
-  footer("; . mover  Enter abrir  ` menu");
+  char ft[56];
+  snprintf(ft, sizeof(ft), "%d/%d  %s", sel + 1, count, hint);
+  footer(ft);
+}
+
+void drawCat() {
+  drawPick("Embutidos: categoria", TFT_VIOLET, NUM_BUILTIN_CATS, catSel,
+           [](int i) { return String(BUILTIN_CATS[i].name); },
+           "Enter abrir  ` menu");
+}
+void drawBrand() {
+  const BCat& c = BUILTIN_CATS[catSel];
+  drawPick(c.name, TFT_VIOLET, c.n, brandSel,
+           [&](int i) { return String(c.brand[i].name); },
+           "Enter abrir  ` voltar");
+}
+void drawModel() {
+  const BBrand& b = BUILTIN_CATS[catSel].brand[brandSel];
+  drawPick(b.name, TFT_VIOLET, b.n, modelSel,
+           [&](int i) { return String(b.rem[i].name); },
+           "Enter abrir  ` voltar");
 }
 
 // ---------- Tela do controle ----------
@@ -342,8 +367,7 @@ char keyFromState() {
 
 void onRemoteKey(char c) {
   if (c == KEY_EXIT) {
-    if (remoteSource.startsWith("sd:")) mode = M_BROWSE;
-    else mode = M_BUILTIN;
+    mode = remoteSource.startsWith("sd:") ? M_BROWSE : M_MODEL;
     return;
   }
   if (c == '\t') {
@@ -384,7 +408,7 @@ void onKey(char c) {
           readDir(curPath);
           mode = M_BROWSE;
         } else if (menuSel == 1) {
-          mode = M_BUILTIN;
+          mode = M_CAT;
         } else {
           mode = M_ABOUT;
         }
@@ -398,16 +422,34 @@ void onKey(char c) {
       else if (c == '\n') browseEnter();
       return;
 
-    case M_BUILTIN:
+    case M_CAT: {
+      int n = NUM_BUILTIN_CATS;
       if (c == KEY_EXIT) mode = M_MENU;
-      else if (c == ';') builtinSel = (builtinSel + NUM_BUILTINS - 1) % NUM_BUILTINS;
-      else if (c == '.') builtinSel = (builtinSel + 1) % NUM_BUILTINS;
+      else if (c == ';') catSel = (catSel + n - 1) % n;
+      else if (c == '.') catSel = (catSel + 1) % n;
+      else if (c == '\n') { brandSel = 0; mode = M_BRAND; }
+      return;
+    }
+    case M_BRAND: {
+      int n = BUILTIN_CATS[catSel].n;
+      if (c == KEY_EXIT) mode = M_CAT;
+      else if (c == ';') brandSel = (brandSel + n - 1) % n;
+      else if (c == '.') brandSel = (brandSel + 1) % n;
+      else if (c == '\n') { modelSel = 0; mode = M_MODEL; }
+      return;
+    }
+    case M_MODEL: {
+      const BBrand& b = BUILTIN_CATS[catSel].brand[brandSel];
+      if (c == KEY_EXIT) mode = M_BRAND;
+      else if (c == ';') modelSel = (modelSel + b.n - 1) % b.n;
+      else if (c == '.') modelSel = (modelSel + 1) % b.n;
       else if (c == '\n') {
-        loadBuiltin(builtinSel, remote);
-        remoteSource = "builtin:" + String(builtinSel);
+        loadBuiltinRemote(b.rem[modelSel], remote);
+        remoteSource = "builtin";
         openRemote();
       }
       return;
+    }
 
     case M_REMOTE: onRemoteKey(c); return;
 
@@ -468,7 +510,9 @@ void loop() {
   switch (mode) {
     case M_MENU: drawMenu(); break;
     case M_BROWSE: drawBrowse(); break;
-    case M_BUILTIN: drawBuiltin(); break;
+    case M_CAT: drawCat(); break;
+    case M_BRAND: drawBrand(); break;
+    case M_MODEL: drawModel(); break;
     case M_REMOTE: drawRemote(); break;
     case M_ABOUT: drawAbout(); break;
   }

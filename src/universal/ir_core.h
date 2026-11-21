@@ -10,6 +10,7 @@
 enum IrProto : uint8_t {
   PR_RAW, PR_NEC, PR_NECEXT, PR_NEC42, PR_NEC42EXT,
   PR_SAMSUNG32, PR_RC5, PR_RC5X, PR_RC6, PR_SIRC, PR_SIRC15, PR_SIRC20,
+  PR_RCA,
   PR_UNSUPPORTED
 };
 
@@ -25,6 +26,7 @@ static IrProto protoFromName(const String& s) {
   if (s == "SIRC") return PR_SIRC;
   if (s == "SIRC15") return PR_SIRC15;
   if (s == "SIRC20") return PR_SIRC20;
+  if (s == "RCA") return PR_RCA;
   return PR_UNSUPPORTED;
 }
 
@@ -42,6 +44,7 @@ static const char* protoLabel(IrProto p) {
     case PR_SIRC: return "SIRC";
     case PR_SIRC15: return "SIRC15";
     case PR_SIRC20: return "SIRC20";
+    case PR_RCA: return "RCA";
     default: return "?";
   }
 }
@@ -90,6 +93,7 @@ class IrCore {
       case PR_SIRC:   sony(12, a0, cmd); break;
       case PR_SIRC15: sony(15, a0, cmd); break;
       case PR_SIRC20: sony(20, a0, cmd); break;
+      case PR_RCA: rca(a0, cmd); break;
       default: break;
     }
   }
@@ -122,6 +126,22 @@ class IrCore {
   void sony(uint16_t nbits, uint8_t addr, uint8_t cmd) {
     uint64_t d = _send.encodeSony(nbits, cmd, addr, 0);
     _send.sendSony(d, nbits, 2);
+  }
+  // RCA: 24 bits (4 end + 8 cmd, depois os 12 invertidos), MSB primeiro, 56 kHz.
+  // A IRremoteESP8266 nao tem RCA, entao montamos os tempos na mao.
+  void rca(uint8_t addr, uint8_t cmd) {
+    uint16_t data12 = ((addr & 0x0F) << 8) | cmd;
+    uint32_t full = ((uint32_t)data12 << 12) | ((~data12) & 0xFFF);
+    uint16_t buf[4 + 24 * 2 + 1];
+    int k = 0;
+    buf[k++] = 4000; buf[k++] = 4000;          // cabecalho
+    for (int i = 23; i >= 0; i--) {
+      bool bit = (full >> i) & 1;
+      buf[k++] = 500;
+      buf[k++] = bit ? 2000 : 1000;
+    }
+    buf[k++] = 500;                            // marca final
+    _send.sendRaw(buf, k, 56);
   }
 };
 
