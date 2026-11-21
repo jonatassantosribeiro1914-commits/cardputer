@@ -55,6 +55,9 @@ CATALOG = [
      ("EN3Y39H",         "TVs/Hisense/Hisense_EN3Y39H.ir"),
      ("32A4HAU",         "TVs/Hisense/Hisense_32A4HAU.ir"),
    ]),
+   ("HTV", [
+     ("HTV 8",           ""),
+   ]),
  ]),
 ]
 
@@ -190,4 +193,3 @@ out.append("static const int NUM_BUILTIN_CATS = sizeof(BUILTIN_CATS) / sizeof(BU
 
 open(OUT, "w").write("\n".join(out) + "\n")
 sys.stderr.write(f"OK: {rid} arrays, {total_btn} botoes -> {OUT}\n")
-PY

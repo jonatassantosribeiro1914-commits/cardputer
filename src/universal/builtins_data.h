@@ -1275,16 +1275,54 @@ static const BRemote rem_31[] = {
   {"EN3Y39H", b_29, 51},
   {"32A4HAU", b_30, 48},
 };
-static const BBrand brand_32[] = {
+static const BBtn b_32[] = {
+  {"Power", PR_NECEXT, 0x80, 0xFF, 0x0A},
+  {"Up", PR_NECEXT, 0x80, 0xFF, 0x00},
+  {"Down", PR_NECEXT, 0x80, 0xFF, 0x01},
+  {"Left", PR_NECEXT, 0x80, 0xFF, 0x03},
+  {"Right", PR_NECEXT, 0x80, 0xFF, 0x02},
+  {"Ok", PR_NECEXT, 0x80, 0xFF, 0x1F},
+  {"Back", PR_NECEXT, 0x80, 0xFF, 0x40},
+  {"Home", PR_NECEXT, 0x80, 0xFF, 0x1C},
+  {"Menu", PR_NECEXT, 0x80, 0xFF, 0x1A},
+  {"Info", PR_NECEXT, 0x80, 0xFF, 0x0B},
+  {"Vol_up", PR_NECEXT, 0x80, 0xFF, 0x44},
+  {"Vol_dn", PR_NECEXT, 0x80, 0xFF, 0x45},
+  {"Mute", PR_NECEXT, 0x80, 0xFF, 0x0D},
+  {"Ch_next", PR_NECEXT, 0x80, 0xFF, 0x4B},
+  {"Ch_prev", PR_NECEXT, 0x80, 0xFF, 0x4C},
+  {"Play_pause", PR_NECEXT, 0x80, 0xFF, 0x46},
+  {"Stop", PR_NECEXT, 0x80, 0xFF, 0x41},
+  {"Rewind", PR_NECEXT, 0x80, 0xFF, 0x5E},
+  {"Forward", PR_NECEXT, 0x80, 0xFF, 0x4A},
+  {"Guide", PR_NECEXT, 0x80, 0xFF, 0x1E},
+  {"Audio", PR_NECEXT, 0x80, 0xFF, 0x5F},
+  {"Favorite", PR_NECEXT, 0x80, 0xFF, 0x1B},
+  {"1", PR_NECEXT, 0x80, 0xFF, 0x11},
+  {"2", PR_NECEXT, 0x80, 0xFF, 0x12},
+  {"3", PR_NECEXT, 0x80, 0xFF, 0x13},
+  {"4", PR_NECEXT, 0x80, 0xFF, 0x14},
+  {"5", PR_NECEXT, 0x80, 0xFF, 0x15},
+  {"6", PR_NECEXT, 0x80, 0xFF, 0x16},
+  {"7", PR_NECEXT, 0x80, 0xFF, 0x17},
+  {"8", PR_NECEXT, 0x80, 0xFF, 0x18},
+  {"9", PR_NECEXT, 0x80, 0xFF, 0x19},
+  {"0", PR_NECEXT, 0x80, 0xFF, 0x10},
+};
+static const BRemote rem_33[] = {
+  {"HTV 8", b_32, 32},
+};
+static const BBrand brand_34[] = {
   {"Samsung", rem_5, 5},
   {"LG", rem_11, 5},
   {"Philips", rem_17, 5},
   {"TCL", rem_23, 5},
   {"Sony", rem_27, 3},
   {"Hisense", rem_31, 3},
+  {"HTV", rem_33, 1},
 };
 
 static const BCat BUILTIN_CATS[] = {
-  {"TVs", brand_32, 6},
+  {"TVs", brand_34, 7},
 };
 static const int NUM_BUILTIN_CATS = sizeof(BUILTIN_CATS) / sizeof(BUILTIN_CATS[0]);
