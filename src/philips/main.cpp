@@ -13,6 +13,7 @@ static const uint8_t BLE_BACKSPACE = 0xB2;  // valor do BleKeyboard
 #include <IRsend.h>
 #include <Preferences.h>
 #include "codes.h"
+#include "../brand/splash.h"
 
 static const uint8_t IR_PIN = 44;  // igual no Cardputer e no Cardputer ADV
 static const char KEY_EXIT = '`';  // tecla "esc" do Cardputer
@@ -767,6 +768,7 @@ void setup() {
   H = M5Cardputer.Display.height();
   M5Cardputer.Display.setBrightness(120);
   canvas.createSprite(W, H);
+  drawSplashJSR(canvas, W, H);
   irsend.begin();
   prefs.begin("controle", false);
   loadConfig();

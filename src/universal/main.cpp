@@ -15,6 +15,7 @@
 #include "ir_core.h"
 #include "keymap.h"
 #include "builtins.h"
+#include "../brand/splash.h"
 
 static const uint8_t IR_PIN = 44;
 static const uint8_t SD_SCK = 40, SD_MISO = 39, SD_MOSI = 14, SD_CS = 12;
@@ -472,6 +473,7 @@ void setup() {
   H = M5Cardputer.Display.height();
   M5Cardputer.Display.setBrightness(120);
   canvas.createSprite(W, H);
+  drawSplashJSR(canvas, W, H);
   ir.begin();
   prefs.begin("iruniv", false);
 
